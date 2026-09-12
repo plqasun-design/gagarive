@@ -368,11 +368,17 @@
         <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl p-6 shadow-sm">
           <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
             
-            <!-- Avatar -->
-            <div class="w-20 h-20 rounded-full picora-gradient-bg p-1 flex-shrink-0">
-              <div class="w-full h-full bg-white dark:bg-darkCard rounded-full flex items-center justify-center text-3xl font-black text-pink-600 dark:text-pink-400 uppercase" id="profileAvatarText">
-                P
+            <!-- Avatar with Upload Option -->
+            <div class="relative group w-20 h-20 rounded-full picora-gradient-bg p-1 flex-shrink-0 cursor-pointer" onclick="document.getElementById('avatarFileInput').click()" title="프로필 사진 변경">
+              <div class="w-full h-full bg-white dark:bg-darkCard rounded-full flex items-center justify-center text-3xl font-black text-pink-600 dark:text-pink-400 uppercase overflow-hidden" id="profileAvatarBox">
+                <span id="profileAvatarText">P</span>
+                <img id="profileAvatarImg" class="hidden w-full h-full object-cover" alt="Profile">
               </div>
+              <div class="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-[10px] font-bold">
+                <i class="fa-solid fa-camera text-base mb-0.5"></i>
+                <span>변경</span>
+              </div>
+              <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarUpload(event)" class="hidden">
             </div>
 
             <!-- Stats & Profile Info -->
@@ -393,9 +399,25 @@
                 <div>팔로잉 <strong class="text-gray-900 dark:text-white font-bold" id="profileFollowingCount">0</strong></div>
               </div>
 
-              <p class="text-xs text-gray-500 dark:text-gray-400 leading-relaxed" id="profileBio">
-                Picora에서 소중한 일상을 기록하고 친구들과 매일 소통하세요! ✨
-              </p>
+              <!-- Editable Profile Bio Section -->
+              <div class="space-y-2">
+                <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line" id="profileBio">
+                  Picora에서 소중한 일상을 기록하고 친구들과 매일 소통하세요! ✨
+                </p>
+
+                <!-- Bio Edit Box -->
+                <div id="bioEditBox" class="hidden space-y-2 pt-1">
+                  <textarea id="bioInput" rows="2" class="w-full text-xs p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 dark:text-white resize-none" placeholder="소개글을 입력하세요..."></textarea>
+                  <div class="flex gap-2 justify-center sm:justify-start">
+                    <button onclick="saveProfileBio()" class="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg transition">저장</button>
+                    <button onclick="toggleBioEdit(false)" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition">취소</button>
+                  </div>
+                </div>
+
+                <button id="editBioBtn" onclick="toggleBioEdit(true)" class="text-[11px] font-bold text-pink-600 dark:text-pink-400 hover:underline inline-flex items-center gap-1 justify-center sm:justify-start">
+                  <i class="fa-solid fa-pen text-[10px]"></i> 프로필 소개 수정
+                </button>
+              </div>
 
               <!-- Actions & Badge Request -->
               <div class="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
@@ -403,8 +425,9 @@
                   공인 인증 체크마크 신청 (1,000 팔로워 필요)
                 </button>
 
-                <button onclick="simulateFollowerBoost()" class="px-3 py-1.5 bg-gray-100 hover:bg-gray-200 dark:bg-gray-800 dark:hover:bg-gray-700 text-gray-700 dark:text-gray-200 text-xs font-semibold rounded-xl transition">
-                  <i class="fa-solid fa-user-plus text-pink-500 mr-1"></i> [테스트] 팔로워 +500
+                <!-- Admin restricted Follower Boost -->
+                <button id="adminBoostBtn" onclick="simulateFollowerBoost()" class="hidden px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl transition border border-indigo-300/50">
+                  <i class="fa-solid fa-user-plus text-indigo-500 mr-1"></i> [관리자 전용] 팔로워 +500
                 </button>
               </div>
             </div>
@@ -438,10 +461,10 @@
       <div class="p-4 space-y-4">
         <textarea id="modalCaption" rows="3" placeholder="문구를 입력하세요... (#해시태그, @소환 가능)" class="w-full p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 dark:text-white resize-none"></textarea>
 
-        <!-- Preview & Filter Selection -->
-        <div id="modalMediaPreviewBox" class="hidden relative rounded-xl overflow-hidden bg-black max-h-72 flex items-center justify-center border border-gray-200 dark:border-gray-700">
-          <img id="modalImgPreview" class="hidden max-h-72 object-contain w-full filter-normal" alt="preview">
-          <video id="modalVidPreview" controls class="hidden max-h-72 w-full"></video>
+        <!-- Dynamic Flexible Preview Container for Landscape & Portrait Videos/Images -->
+        <div id="modalMediaPreviewBox" class="hidden relative rounded-xl overflow-hidden bg-black max-h-96 flex items-center justify-center border border-gray-200 dark:border-gray-700">
+          <img id="modalImgPreview" class="hidden max-h-96 object-contain w-full filter-normal" alt="preview">
+          <video id="modalVidPreview" controls class="hidden max-h-96 w-full object-contain"></video>
         </div>
 
         <!-- Filter Selector Options -->
@@ -636,7 +659,11 @@
 
       const navAvatar = document.getElementById('navAvatar');
       if (navAvatar && window.currentUser) {
-        navAvatar.textContent = window.currentUser.name.charAt(0).toUpperCase();
+        if (window.currentUser.avatarUrl) {
+          navAvatar.innerHTML = `<img src="${window.currentUser.avatarUrl}" class="w-full h-full object-cover">`;
+        } else {
+          navAvatar.textContent = window.currentUser.name.charAt(0).toUpperCase();
+        }
       }
 
       const guestNotice = document.getElementById('demoGuestNotice');
@@ -1000,11 +1027,19 @@
         postCard.id = `post-card-${post.id}`;
         postCard.className = 'post-card bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl overflow-hidden shadow-sm transition';
 
+        /* Dynamic image/video display supporting both landscape and portrait orientations */
+        const authorUser = window.users.find(u => u.id === post.authorId);
+        const avatarUrl = authorUser?.avatarUrl || post.authorAvatar;
+        
+        let authorAvatarHtml = avatarUrl 
+          ? `<img src="${avatarUrl}" class="w-full h-full object-cover">`
+          : (post.authorName || 'U').charAt(0);
+
         let mediaHtml = post.mediaSrc ? `
-          <div class="bg-black max-h-[420px] flex items-center justify-center overflow-hidden">
+          <div class="bg-black max-h-[520px] w-full flex items-center justify-center overflow-hidden">
             ${post.mediaType === 'video' ? 
-              `<video src="${post.mediaSrc}" controls preload="metadata" class="w-full max-h-[420px] object-contain"></video>` :
-              `<img src="${post.mediaSrc}" loading="lazy" class="w-full max-h-[420px] object-contain filter-${post.filter || 'normal'}">`
+              `<video src="${post.mediaSrc}" controls preload="metadata" class="w-full max-h-[520px] object-contain"></video>` :
+              `<img src="${post.mediaSrc}" loading="lazy" class="w-full max-h-[520px] object-contain filter-${post.filter || 'normal'}">`
             }
           </div>
         ` : '';
@@ -1016,8 +1051,8 @@
         postCard.innerHTML = `
           <div class="p-3.5 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
             <div class="flex items-center space-x-2.5">
-              <div class="w-8 h-8 rounded-full picora-gradient-bg flex items-center justify-center text-white text-xs font-bold uppercase">
-                ${(post.authorName || 'U').charAt(0)}
+              <div class="w-8 h-8 rounded-full picora-gradient-bg flex items-center justify-center text-white text-xs font-bold uppercase overflow-hidden">
+                ${authorAvatarHtml}
               </div>
               <div>
                 <div class="flex items-center space-x-1">
@@ -1431,7 +1466,20 @@
     function renderProfileTab() {
       if (!window.currentUser) return;
 
-      document.getElementById('profileAvatarText').textContent = window.currentUser.name.charAt(0).toUpperCase();
+      const avatarBox = document.getElementById('profileAvatarBox');
+      const avatarText = document.getElementById('profileAvatarText');
+      const avatarImg = document.getElementById('profileAvatarImg');
+
+      if (window.currentUser.avatarUrl) {
+        avatarText.classList.add('hidden');
+        avatarImg.classList.remove('hidden');
+        avatarImg.src = window.currentUser.avatarUrl;
+      } else {
+        avatarImg.classList.add('hidden');
+        avatarText.classList.remove('hidden');
+        avatarText.textContent = window.currentUser.name.charAt(0).toUpperCase();
+      }
+
       document.getElementById('profileName').textContent = window.currentUser.name;
       
       const profileBadge = document.getElementById('profileBadge');
@@ -1441,10 +1489,22 @@
         profileBadge.classList.add('hidden');
       }
 
+      // Render Bio / Description
+      const profileBio = document.getElementById('profileBio');
+      profileBio.textContent = window.currentUser.bio || "Picora에서 소중한 일상을 기록하고 친구들과 매일 소통하세요! ✨";
+
       const myPosts = window.posts.filter(p => p.authorId === window.currentUser.id);
       document.getElementById('profilePostCount').textContent = myPosts.length;
       document.getElementById('profileFollowerCount').textContent = (window.currentUser.followers || 0).toLocaleString();
       document.getElementById('profileFollowingCount').textContent = (window.currentUser.following || 0);
+
+      // Admin Restricted Follower Boost Button
+      const adminBoostBtn = document.getElementById('adminBoostBtn');
+      if (window.currentUser.isAdmin) {
+        adminBoostBtn.classList.remove('hidden');
+      } else {
+        adminBoostBtn.classList.add('hidden');
+      }
 
       const applyBtn = document.getElementById('badgeApplyBtn');
       if (window.currentUser.hasBadge) {
@@ -1479,12 +1539,68 @@
       });
     }
 
+    window.handleAvatarUpload = function(e) {
+      const file = e.target.files[0];
+      if (!file || !window.currentUser) return;
+
+      const reader = new FileReader();
+      reader.onload = async function(event) {
+        window.currentUser.avatarUrl = event.target.result;
+        await saveUserToCloud(window.currentUser);
+        sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
+        window.showToast("프로필 사진이 변경되었습니다!", "fa-image");
+        renderProfileTab();
+        window.showMainApp();
+      };
+      reader.readAsDataURL(file);
+    };
+
+    window.toggleBioEdit = function(show) {
+      const bioEditBox = document.getElementById('bioEditBox');
+      const bioInput = document.getElementById('bioInput');
+      const profileBio = document.getElementById('profileBio');
+      const editBioBtn = document.getElementById('editBioBtn');
+
+      if (show) {
+        bioInput.value = window.currentUser?.bio || '';
+        bioEditBox.classList.remove('hidden');
+        profileBio.classList.add('hidden');
+        editBioBtn.classList.add('hidden');
+      } else {
+        bioEditBox.classList.add('hidden');
+        profileBio.classList.remove('hidden');
+        editBioBtn.classList.remove('hidden');
+      }
+    };
+
+    window.saveProfileBio = async function() {
+      if (!window.currentUser) return;
+
+      const bioInput = document.getElementById('bioInput');
+      const newBio = bioInput.value.trim();
+
+      window.currentUser.bio = newBio;
+      await saveUserToCloud(window.currentUser);
+      sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
+
+      window.showToast("프로필 소개글이 저장되었습니다!", "fa-floppy-disk");
+      window.toggleBioEdit(false);
+      renderProfileTab();
+    };
+
     window.simulateFollowerBoost = async function() {
       if (!window.currentUser) return;
+
+      // Restrict follower boost ONLY to Admin
+      if (!window.currentUser.isAdmin) {
+        window.showToast("관리자 권한이 있는 계정만 사용할 수 있습니다.", "fa-lock");
+        return;
+      }
+
       window.currentUser.followers = (window.currentUser.followers || 0) + 500;
       await saveUserToCloud(window.currentUser);
       sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-      window.showToast(`팔로워가 500명 증가하였습니다! (현재: ${window.currentUser.followers.toLocaleString()}명)`, "fa-user-plus");
+      window.showToast(`[관리자] 팔로워가 500명 증가하였습니다! (현재: ${window.currentUser.followers.toLocaleString()}명)`, "fa-user-plus");
       renderProfileTab();
     };
 
