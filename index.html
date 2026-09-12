@@ -11,1617 +11,742 @@
       theme: {
         extend: {
           colors: {
-            picoraPink: '#E1306C',
-            picoraPurple: '#833AB4',
-            picoraOrange: '#F56040',
-            picoraYellow: '#FCAF45',
-            darkBg: '#0f172a',
-            darkCard: '#1e293b',
-            darkBorder: '#334155'
+            instaBg: '#fafafa',
+            instaDarkBg: '#121212',
+            instaCardDark: '#1e1e1e',
+            instaBorder: '#dbdbdb',
+            instaDarkBorder: '#2f2f2f',
+            instaBlue: '#0095f6',
           }
         }
       }
     }
   </script>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,800&display=swap');
-    
-    body {
-      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      contain-intrinsic-size: 1000px;
-    }
-
-    /* GPU acceleration for smoother scrolling */
-    .post-card {
-      will-change: transform, opacity;
-      transform: translateZ(0);
-    }
-
-    .picora-gradient-text {
-      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    
-    .picora-gradient-bg {
-      background: linear-gradient(45deg, #f09433 0%, #e6683c 25%, #dc2743 50%, #cc2366 75%, #bc1888 100%);
-    }
-
-    .picora-story-ring {
-      background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888);
-      padding: 2.5px;
-    }
-
-    /* CSS Photo Filters */
-    .filter-normal { filter: none; }
-    .filter-grayscale { filter: grayscale(100%); }
-    .filter-sepia { filter: sepia(90%); }
-    .filter-vintage { filter: sepia(40%) contrast(120%) brightness(90%) hue-rotate(-10deg); }
-    .filter-warm { filter: sepia(30%) saturate(140%) brightness(105%); }
-    .filter-cool { filter: hue-rotate(30deg) saturate(120%) brightness(105%); }
-    .filter-dramatic { filter: contrast(160%) brightness(90%) saturate(130%); }
-
-    /* Custom Scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 9999px; }
-    .dark ::-webkit-scrollbar-thumb { background: #475569; }
-    
-    .hashtag { color: #2563eb; font-weight: 600; cursor: pointer; }
-    .dark .hashtag { color: #60a5fa; }
-    .mention { color: #d946ef; font-weight: 600; cursor: pointer; }
-
-    /* Heart Burst Animation */
-    @keyframes heartBurst {
-      0% { transform: scale(0.3); opacity: 0; }
-      50% { transform: scale(1.3); opacity: 1; }
-      100% { transform: scale(1); opacity: 0; }
-    }
-    .heart-anim { animation: heartBurst 0.8s ease-in-out forwards; }
+    .badge-icon { color: #0095f6; margin-left: 2px; display: inline-block; vertical-align: middle; }
+    .story-ring { background: linear-gradient(45deg, #f09433, #e6683c, #dc2743, #cc2366, #bc1888); }
+    .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+    .custom-scrollbar::-webkit-scrollbar-thumb { background: #ccc; border-radius: 4px; }
+    .dark .custom-scrollbar::-webkit-scrollbar-thumb { background: #444; }
   </style>
+
+  <!-- Firebase SDKs -->
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
 </head>
-<body class="bg-gray-50 dark:bg-darkBg text-gray-900 dark:text-gray-100 min-h-full transition-colors duration-200">
+<body class="bg-instaBg dark:bg-instaDarkBg text-gray-900 dark:text-gray-100 h-full font-sans transition-colors duration-200">
 
-  <!-- AUTHENTICATION / LOGIN VIEW -->
-  <div id="authContainer" class="min-h-screen flex flex-col items-center justify-center p-4">
-    <div class="w-full max-w-sm bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl shadow-xl p-8 transition-all">
-      <div class="text-center mb-6">
-        <h1 class="text-4xl font-extrabold tracking-tight picora-gradient-text italic font-serif">Picora</h1>
-        <p class="text-xs text-gray-500 dark:text-gray-400 mt-2 font-medium">소중한 포토 스토리 & 순간을 공유해보세요</p>
-      </div>
+  <!-- Notification Toast -->
+  <div id="toast" class="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-gray-900 text-white dark:bg-white dark:text-gray-900 px-4 py-2 rounded-full text-sm shadow-lg opacity-0 transition-opacity duration-300 pointer-events-none"></div>
 
-      <!-- Login / Signup Form -->
-      <form id="authForm" onsubmit="handleAuth(event)" class="space-y-3.5">
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">아이디</label>
-          <input type="text" id="authId" required placeholder="아이디 입력" class="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition dark:text-white">
-        </div>
+  <!-- Hidden File Input for Profile Picture -->
+  <input type="file" id="profilePicInput" accept="image/*" class="hidden" onchange="handleProfilePicUpload(event)">
 
-        <div id="nicknameFieldGroup" class="hidden">
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">닉네임 (중복 불가)</label>
-          <input type="text" id="authName" placeholder="실제 사용할 닉네임 입력" class="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition dark:text-white">
-        </div>
+  <!-- Header -->
+  <header class="sticky top-0 z-40 bg-white dark:bg-black border-b border-instaBorder dark:border-instaDarkBorder px-4 py-3 flex justify-between items-center max-w-lg mx-auto">
+    <h1 class="text-2xl font-bold italic tracking-tight bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent cursor-pointer" onclick="switchTab('feed')">Picora</h1>
+    
+    <div id="headerNav" class="flex items-center space-x-3 hidden">
+      <button onclick="toggleDarkMode()" class="text-xl p-1" title="다크모드 토글">🌙</button>
+      <button onclick="switchTab('explore')" class="text-xl p-1" title="탐색/릴스">🔍</button>
+      <button onclick="switchTab('dm')" class="text-xl p-1 relative" title="메시지">
+        💬 <span id="dmBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 rounded-full flex items-center justify-center font-bold">●</span>
+      </button>
+      <button onclick="switchTab('profile')" class="text-xl p-1" title="프로필">👤</button>
+      <button onclick="logout()" class="text-xs bg-gray-200 dark:bg-gray-800 px-2 py-1 rounded font-semibold">로그아웃</button>
+    </div>
+  </header>
 
-        <div>
-          <label class="block text-xs font-semibold text-gray-600 dark:text-gray-300 mb-1">비밀번호</label>
-          <input type="password" id="authPw" required placeholder="비밀번호 입력" class="w-full px-3.5 py-2.5 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 transition dark:text-white">
-        </div>
+  <!-- Main Container -->
+  <main class="max-w-lg mx-auto pb-20">
 
-        <button type="submit" id="authSubmitBtn" class="w-full py-2.5 mt-2 picora-gradient-bg text-white font-bold rounded-xl text-sm shadow-md hover:opacity-95 transition active:scale-[0.98]">
-          로그인
-        </button>
+    <!-- Auth View -->
+    <div id="authView" class="p-6 mt-6 max-w-sm mx-auto bg-white dark:bg-instaCardDark border border-instaBorder dark:border-instaDarkBorder rounded-lg shadow-sm text-center">
+      <h2 class="text-3xl font-bold italic mb-6 bg-gradient-to-r from-orange-500 via-pink-500 to-purple-600 bg-clip-text text-transparent">Picora</h2>
+      
+      <form id="authForm" onsubmit="handleAuth(event)" class="space-y-3">
+        <input type="text" id="authId" placeholder="아이디" required class="w-full px-3 py-2 text-xs border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 focus:outline-none">
+        <input type="text" id="authName" placeholder="닉네임 (회원가입 시)" class="signup-only hidden w-full px-3 py-2 text-xs border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 focus:outline-none">
+        <input type="password" id="authPw" placeholder="비밀번호" class="pw-only w-full px-3 py-2 text-xs border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 focus:outline-none">
+        
+        <button type="submit" id="authBtn" class="w-full bg-instaBlue text-white py-2 rounded font-semibold text-sm hover:bg-blue-600 transition">로그인</button>
       </form>
 
-      <!-- Guest Demo Mode Button -->
-      <div class="mt-4 pt-3 border-t border-gray-100 dark:border-gray-700/60 text-center">
-        <button onclick="enterDemoMode()" class="w-full py-2 bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white font-bold text-xs rounded-xl shadow transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-wand-magic-sparkles"></i>
-          <span>[맛보기] 로그인 없이 먼저 경험해보기</span>
-        </button>
+      <div class="mt-4 text-xs text-instaBlue cursor-pointer" id="authToggle" onclick="toggleAuthMode()">
+        계정이 없으신가요? 회원가입
       </div>
 
-      <div class="mt-4 text-center">
-        <span id="authToggleText" class="text-xs text-gray-500 dark:text-gray-400">계정이 없으신가요?</span>
-        <button onclick="toggleAuthMode()" id="authToggleBtn" class="text-xs font-bold text-pink-600 dark:text-pink-400 hover:underline ml-1">
-          회원가입
+      <div class="mt-6 border-t border-gray-200 dark:border-gray-700 pt-4">
+        <button onclick="enterDemoMode()" class="w-full bg-gray-100 dark:bg-gray-800 text-gray-700 dark:text-gray-300 py-2 rounded text-xs font-semibold hover:bg-gray-200 dark:hover:bg-gray-700 transition">
+          🚀 로그인 없이 둘러보기 (맛보기 모드)
         </button>
       </div>
     </div>
-  </div>
 
-  <!-- MAIN APP VIEW -->
-  <div id="appContainer" class="hidden min-h-screen flex flex-col md:flex-row max-w-7xl mx-auto">
-    
-    <!-- Sidebar Navigation (Desktop) / Bottom Nav (Mobile) -->
-    <aside class="fixed bottom-0 md:sticky md:top-0 left-0 z-40 w-full md:w-64 h-16 md:h-screen bg-white dark:bg-darkCard border-t md:border-t-0 md:border-r border-gray-200 dark:border-darkBorder flex md:flex-col justify-between p-2 md:p-5 transition-colors">
-      <div class="w-full flex md:flex-col items-center md:items-start justify-around md:justify-start md:space-y-6">
-        
-        <!-- Logo -->
-        <div class="hidden md:flex items-center justify-between w-full px-2 mb-2">
-          <h1 class="text-3xl font-black picora-gradient-text italic font-serif cursor-pointer" onclick="switchTab('feed')">Picora</h1>
-          <button onclick="toggleDarkMode()" class="p-2 text-gray-500 hover:text-gray-800 dark:text-gray-400 dark:hover:text-white transition">
-            <i class="fa-solid fa-moon text-lg dark:hidden"></i>
-            <i class="fa-solid fa-sun text-lg hidden dark:block text-amber-400"></i>
-          </button>
+    <!-- App Views Container -->
+    <div id="appView" class="hidden">
+
+      <!-- Admin Panel -->
+      <div id="adminPanel" class="hidden m-4 p-4 border border-instaBlue rounded-lg bg-blue-50 dark:bg-blue-950/30 text-xs space-y-3">
+        <div class="flex justify-between items-center">
+          <h3 class="font-bold text-instaBlue text-sm">🛡️ 관리자 대시보드 (클라우드 데이터 관리)</h3>
+          <span class="text-gray-500">전체 가입자: <strong id="adminUserCount" class="text-black dark:text-white">0</strong>명</span>
         </div>
-
-        <!-- Navigation Buttons -->
-        <nav class="flex md:flex-col w-full justify-around md:justify-start md:space-y-1.5">
-          <button onclick="switchTab('feed')" id="nav-feed" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-700 dark:text-gray-200 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <i class="fa-solid fa-house text-xl"></i>
-            <span class="hidden md:inline text-sm">홈</span>
-          </button>
-
-          <button onclick="switchTab('explore')" id="nav-explore" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <i class="fa-solid fa-compass text-xl"></i>
-            <span class="hidden md:inline text-sm">탐색</span>
-          </button>
-
-          <button onclick="switchTab('reels')" id="nav-reels" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <i class="fa-solid fa-film text-xl"></i>
-            <span class="hidden md:inline text-sm">릴스</span>
-          </button>
-
-          <button onclick="switchTab('messages')" id="nav-messages" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 relative transition">
-            <i class="fa-solid fa-paper-plane text-xl"></i>
-            <span class="hidden md:inline text-sm">메시지</span>
-            <span id="unreadDmDot" class="hidden absolute top-2 left-6 md:left-8 w-2 h-2 bg-pink-500 rounded-full"></span>
-          </button>
-
-          <button onclick="openCreateModal()" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <i class="fa-solid fa-square-plus text-xl text-pink-500"></i>
-            <span class="hidden md:inline text-sm font-bold text-pink-600 dark:text-pink-400">만들기</span>
-          </button>
-
-          <button onclick="switchTab('profile')" id="nav-profile" class="nav-btn flex items-center space-x-3 w-full p-2.5 md:px-4 rounded-xl font-semibold text-gray-500 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800 transition">
-            <div class="w-6 h-6 rounded-full picora-gradient-bg flex items-center justify-center text-white text-xs font-bold overflow-hidden" id="navAvatar">
-              P
-            </div>
-            <span class="hidden md:inline text-sm">프로필</span>
-          </button>
-        </nav>
+        <div class="flex gap-2 border-b border-blue-200 dark:border-blue-800 pb-2">
+          <button onclick="switchAdminTab('users')" class="px-2 py-1 bg-instaBlue text-white rounded font-bold">계정 관리</button>
+          <button onclick="switchAdminTab('posts')" class="px-2 py-1 bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 rounded">게시물 관리</button>
+        </div>
+        <div id="adminContent" class="max-h-48 overflow-y-auto space-y-2 custom-scrollbar"></div>
       </div>
 
-      <!-- User Quick Bar / Logout (Desktop Bottom) -->
-      <div class="hidden md:block w-full pt-4 border-t border-gray-200 dark:border-gray-700">
-        <div id="demoGuestNotice" class="hidden mb-3 p-2.5 bg-amber-50 dark:bg-amber-900/30 border border-amber-200 dark:border-amber-800/50 rounded-xl text-xs text-amber-800 dark:text-amber-300">
-          <p class="font-bold flex items-center gap-1"><i class="fa-solid fa-circle-info"></i> 맛보기 체험 모드</p>
-          <p class="mt-0.5 text-[11px]">모든 기능을 자유롭게 사용해보실 수 있습니다.</p>
-        </div>
-
-        <button onclick="logout()" class="flex items-center space-x-3 w-full p-2.5 text-gray-500 dark:text-gray-400 hover:text-red-600 dark:hover:text-red-400 rounded-xl font-semibold text-sm transition">
-          <i class="fa-solid fa-right-from-bracket text-lg"></i>
-          <span>로그아웃</span>
-        </button>
-      </div>
-    </aside>
-
-    <!-- Content Core -->
-    <main class="flex-1 max-w-2xl mx-auto w-full px-3 py-4 md:py-6 pb-20 md:pb-6 space-y-6">
-      
-      <!-- Mobile Header -->
-      <header class="flex md:hidden items-center justify-between pb-3 border-b border-gray-200 dark:border-darkBorder">
-        <h1 class="text-2xl font-black picora-gradient-text italic font-serif" onclick="switchTab('feed')">Picora</h1>
-        <div class="flex items-center space-x-3">
-          <button onclick="toggleDarkMode()" class="text-gray-600 dark:text-gray-300">
-            <i class="fa-solid fa-moon dark:hidden"></i>
-            <i class="fa-solid fa-sun hidden dark:block text-amber-400"></i>
-          </button>
-          <button onclick="logout()" class="text-xs font-bold text-gray-500 dark:text-gray-400">
-            로그아웃
-          </button>
-        </div>
-      </header>
-
-      <!-- VIEW 1: MAIN FEED TAB -->
-      <section id="tab-feed" class="tab-content space-y-6">
-        
-        <!-- Admin Dashboard Banner & Data Management Suite -->
-        <div id="adminPanel" class="hidden bg-gradient-to-br from-slate-900 via-indigo-950 to-slate-900 text-white rounded-2xl p-5 shadow-xl border border-indigo-500/30 space-y-4">
-          <div class="flex items-center justify-between border-b border-indigo-500/30 pb-3">
-            <div class="flex items-center space-x-2">
-              <span class="bg-indigo-500/20 text-indigo-300 p-2 rounded-xl border border-indigo-400/30">
-                <i class="fa-solid fa-user-shield text-lg"></i>
-              </span>
-              <div>
-                <h3 class="font-bold text-sm text-indigo-100">Picora 통합 관리자 센터</h3>
-                <p class="text-[11px] text-indigo-300">실시간 클라우드 데이터 관리 및 시스템 제어</p>
-              </div>
+      <!-- Feed Tab -->
+      <div id="tabFeed" class="tab-content">
+        <!-- Stories -->
+        <div class="bg-white dark:bg-black border-b border-instaBorder dark:border-instaDarkBorder p-3 flex space-x-4 overflow-x-auto custom-scrollbar">
+          <div class="flex flex-col items-center space-y-1 cursor-pointer min-w-[60px]" onclick="triggerStoryUpload()">
+            <div class="w-14 h-14 rounded-full border-2 border-gray-300 dark:border-gray-700 flex items-center justify-center text-xl bg-gray-100 dark:bg-gray-800 overflow-hidden">
+              <img id="myStoryAvatar" src="https://via.placeholder.com/150" class="w-full h-full object-cover hidden">
+              <span id="myStoryPlus">+</span>
             </div>
-            <span class="text-[10px] bg-indigo-500/40 text-indigo-200 px-2.5 py-1 rounded-full font-mono font-bold tracking-wider">ADMIN MODE</span>
+            <span class="text-[11px] truncate w-14 text-center">내 스토리</span>
+            <input type="file" id="storyFileInput" accept="image/*,video/*" class="hidden" onchange="uploadStory(event)">
           </div>
-
-          <!-- Quick System Stats -->
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-center">
-            <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-sm border border-white/5">
-              <p class="text-[10px] text-indigo-200">가입 사용자</p>
-              <p class="text-xl font-black text-white mt-0.5" id="adminTotalUsers">0명</p>
-            </div>
-            <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-sm border border-white/5">
-              <p class="text-[10px] text-indigo-200">피드 게시물</p>
-              <p class="text-xl font-black text-white mt-0.5" id="adminTotalPosts">0개</p>
-            </div>
-            <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-sm border border-white/5">
-              <p class="text-[10px] text-indigo-200">24h 스토리</p>
-              <p class="text-xl font-black text-white mt-0.5" id="adminTotalStories">0개</p>
-            </div>
-            <div class="bg-white/10 rounded-xl p-2.5 backdrop-blur-sm border border-white/5">
-              <p class="text-[10px] text-indigo-200">다이렉트 메시지</p>
-              <p class="text-xl font-black text-white mt-0.5" id="adminTotalMessages">0개</p>
-            </div>
-          </div>
-
-          <!-- Admin Management Tabs & Controls -->
-          <div class="space-y-3 pt-2">
-            <div class="flex space-x-2 text-xs border-b border-indigo-500/20 pb-2 overflow-x-auto">
-              <button onclick="switchAdminTab('users')" id="adminTabBtn-users" class="px-3 py-1.5 rounded-lg font-bold bg-indigo-600 text-white transition">사용자 관리</button>
-              <button onclick="switchAdminTab('posts')" id="adminTabBtn-posts" class="px-3 py-1.5 rounded-lg font-bold bg-white/10 text-indigo-200 hover:bg-white/20 transition">게시물 관리</button>
-              <button onclick="switchAdminTab('stories')" id="adminTabBtn-stories" class="px-3 py-1.5 rounded-lg font-bold bg-white/10 text-indigo-200 hover:bg-white/20 transition">스토리 관리</button>
-              <button onclick="switchAdminTab('messages')" id="adminTabBtn-messages" class="px-3 py-1.5 rounded-lg font-bold bg-white/10 text-indigo-200 hover:bg-white/20 transition">메시지 관리</button>
-            </div>
-
-            <!-- Admin Tab Content: Users -->
-            <div id="adminTab-users" class="admin-tab-content space-y-2 max-h-56 overflow-y-auto pr-1">
-              <!-- Users dynamic admin list -->
-            </div>
-
-            <!-- Admin Tab Content: Posts -->
-            <div id="adminTab-posts" class="admin-tab-content hidden space-y-2 max-h-56 overflow-y-auto pr-1">
-              <!-- Posts dynamic admin list -->
-            </div>
-
-            <!-- Admin Tab Content: Stories -->
-            <div id="adminTab-stories" class="admin-tab-content hidden space-y-2 max-h-56 overflow-y-auto pr-1">
-              <!-- Stories dynamic admin list -->
-            </div>
-
-            <!-- Admin Tab Content: Messages -->
-            <div id="adminTab-messages" class="admin-tab-content hidden space-y-2 max-h-56 overflow-y-auto pr-1">
-              <!-- Messages dynamic admin list -->
-            </div>
-          </div>
+          <div id="storiesContainer" class="flex space-x-4"></div>
         </div>
 
-        <!-- 24-Hour Stories Tray -->
-        <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl p-3.5 shadow-sm overflow-x-auto flex space-x-4 items-center">
-          <!-- Add My Story Circle -->
-          <div onclick="openStoryUploadModal()" class="flex flex-col items-center space-y-1 cursor-pointer flex-shrink-0 group">
-            <div class="relative w-14 h-14 rounded-full bg-gray-100 dark:bg-gray-800 border-2 border-dashed border-pink-400 flex items-center justify-center group-hover:scale-105 transition">
-              <i class="fa-solid fa-plus text-pink-500 text-lg"></i>
-            </div>
-            <span class="text-[11px] font-semibold text-gray-700 dark:text-gray-300">스토리 등록</span>
-          </div>
-
-          <div id="storiesContainer" class="flex space-x-4 items-center">
-            <!-- Dynamic Stories will appear here -->
-          </div>
-        </div>
-
-        <!-- Feed Posts Stream -->
-        <div id="feedStream" class="space-y-6">
-          <!-- Dynamically Rendered Posts -->
-        </div>
-      </section>
-
-      <!-- VIEW 2: EXPLORE TAB -->
-      <section id="tab-explore" class="tab-content hidden space-y-4">
-        <!-- Search Bar -->
-        <div class="relative">
-          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-3 text-gray-400 text-sm"></i>
-          <input type="text" id="exploreSearchInput" oninput="handleExploreSearch()" placeholder="해시태그(#), 닉네임(@) 검색..." class="w-full pl-10 pr-4 py-2.5 text-sm bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 dark:text-white">
-        </div>
-
-        <!-- Grid View of Media -->
-        <div id="exploreGrid" class="grid grid-cols-3 gap-1.5 md:gap-2 rounded-xl overflow-hidden">
-          <!-- Grid items dynamically rendered -->
-        </div>
-      </section>
-
-      <!-- VIEW 3: REELS SHORT VIDEO TAB -->
-      <section id="tab-reels" class="tab-content hidden space-y-4 flex flex-col items-center">
-        <div id="reelsContainer" class="w-full max-w-sm space-y-6">
-          <!-- Reels video feed -->
-        </div>
-      </section>
-
-      <!-- VIEW 4: DIRECT MESSAGES (DM) TAB -->
-      <section id="tab-messages" class="tab-content hidden">
-        <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl h-[550px] flex overflow-hidden shadow-sm">
+        <!-- Create Post -->
+        <div class="bg-white dark:bg-instaCardDark border-b border-instaBorder dark:border-instaDarkBorder p-4 mb-4">
+          <textarea id="postCaption" placeholder="문구 입력..." class="w-full text-xs p-2 border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 resize-none h-16 focus:outline-none mb-2"></textarea>
           
-          <!-- DM User List Sidebar -->
-          <div class="w-2/5 border-r border-gray-200 dark:border-darkBorder flex flex-col">
-            <div class="p-3.5 border-b border-gray-200 dark:border-darkBorder font-bold text-sm text-gray-800 dark:text-white flex items-center justify-between">
-              <span>메시지함</span>
-              <i class="fa-regular fa-paper-plane text-pink-500"></i>
-            </div>
-            <div id="dmUserList" class="flex-1 overflow-y-auto divide-y divide-gray-100 dark:divide-gray-800">
-              <!-- Users for DM rendered here -->
+          <!-- Filter Selection -->
+          <div id="filterSelection" class="hidden mb-2">
+            <label class="text-[11px] text-gray-500 block mb-1">사진 필터 적용:</label>
+            <div class="flex gap-2 overflow-x-auto text-xs">
+              <button onclick="setPostFilter('none')" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">원본</button>
+              <button onclick="setPostFilter('grayscale(100%)')" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">흑백</button>
+              <button onclick="setPostFilter('sepia(100%)')" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">세피아</button>
+              <button onclick="setPostFilter('contrast(150%)')" class="px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded">선명하게</button>
             </div>
           </div>
 
-          <!-- DM Chat Box -->
-          <div class="w-3/5 flex flex-col justify-between bg-gray-50/50 dark:bg-gray-900/40">
-            <div id="chatHeader" class="p-3 bg-white dark:bg-darkCard border-b border-gray-200 dark:border-darkBorder text-xs font-bold text-gray-800 dark:text-white flex items-center space-x-2">
-              <span>대화 상대를 선택해주세요</span>
-            </div>
-
-            <!-- Messages Log -->
-            <div id="chatMessagesLog" class="flex-1 p-3 overflow-y-auto space-y-2 text-xs">
-              <div class="text-center text-gray-400 py-10">좌측 목록에서 대화할 대상을 클릭하세요.</div>
-            </div>
-
-            <!-- Chat Input Form -->
-            <form onsubmit="sendDirectMessage(event)" class="p-2.5 bg-white dark:bg-darkCard border-t border-gray-200 dark:border-darkBorder flex items-center space-x-2">
-              <input type="text" id="dmInput" disabled placeholder="메시지 보내기..." class="flex-1 px-3 py-1.5 text-xs bg-gray-100 dark:bg-gray-800 border-0 rounded-full focus:outline-none focus:ring-1 focus:ring-pink-500 dark:text-white">
-              <button type="submit" id="dmSendBtn" disabled class="px-3 py-1.5 picora-gradient-bg text-white text-xs font-bold rounded-full disabled:opacity-40">
-                전송
-              </button>
-            </form>
-          </div>
-        </div>
-      </section>
-
-      <!-- VIEW 5: USER PROFILE TAB -->
-      <section id="tab-profile" class="tab-content hidden space-y-6">
-        <!-- Profile Header Box -->
-        <div class="bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl p-6 shadow-sm">
-          <div class="flex flex-col sm:flex-row items-center sm:items-start space-y-4 sm:space-y-0 sm:space-x-6">
-            
-            <!-- Avatar with Upload Option -->
-            <div class="relative group w-20 h-20 rounded-full picora-gradient-bg p-1 flex-shrink-0 cursor-pointer" onclick="document.getElementById('avatarFileInput').click()" title="프로필 사진 변경">
-              <div class="w-full h-full bg-white dark:bg-darkCard rounded-full flex items-center justify-center text-3xl font-black text-pink-600 dark:text-pink-400 uppercase overflow-hidden" id="profileAvatarBox">
-                <span id="profileAvatarText">P</span>
-                <img id="profileAvatarImg" class="hidden w-full h-full object-cover" alt="Profile">
-              </div>
-              <div class="absolute inset-0 bg-black/40 rounded-full flex flex-col items-center justify-center opacity-0 group-hover:opacity-100 transition text-white text-[10px] font-bold">
-                <i class="fa-solid fa-camera text-base mb-0.5"></i>
-                <span>변경</span>
-              </div>
-              <input type="file" id="avatarFileInput" accept="image/*" onchange="handleAvatarUpload(event)" class="hidden">
-            </div>
-
-            <!-- Stats & Profile Info -->
-            <div class="flex-1 text-center sm:text-left space-y-3">
-              <div class="flex flex-col sm:flex-row sm:items-center gap-2">
-                <h2 class="text-xl font-bold text-gray-900 dark:text-white flex items-center justify-center sm:justify-start gap-1" id="profileName">
-                  사용자명
-                </h2>
-                <span id="profileBadge" class="hidden text-blue-500" title="공인 인증 계정">
-                  <i class="fa-solid fa-circle-check text-lg"></i>
-                </span>
-              </div>
-
-              <!-- Stats Counts -->
-              <div class="flex justify-center sm:justify-start space-x-6 text-xs text-gray-600 dark:text-gray-300 font-medium">
-                <div>게시물 <strong class="text-gray-900 dark:text-white font-bold" id="profilePostCount">0</strong></div>
-                <div>팔로워 <strong class="text-gray-900 dark:text-white font-bold" id="profileFollowerCount">0</strong></div>
-                <div>팔로잉 <strong class="text-gray-900 dark:text-white font-bold" id="profileFollowingCount">0</strong></div>
-              </div>
-
-              <!-- Editable Profile Bio Section -->
-              <div class="space-y-2">
-                <p class="text-xs text-gray-600 dark:text-gray-300 leading-relaxed whitespace-pre-line" id="profileBio">
-                  Picora에서 소중한 일상을 기록하고 친구들과 매일 소통하세요! ✨
-                </p>
-
-                <!-- Bio Edit Box -->
-                <div id="bioEditBox" class="hidden space-y-2 pt-1">
-                  <textarea id="bioInput" rows="2" class="w-full text-xs p-2.5 bg-gray-50 dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 dark:text-white resize-none" placeholder="소개글을 입력하세요..."></textarea>
-                  <div class="flex gap-2 justify-center sm:justify-start">
-                    <button onclick="saveProfileBio()" class="px-3 py-1 bg-pink-600 hover:bg-pink-700 text-white text-xs font-bold rounded-lg transition">저장</button>
-                    <button onclick="toggleBioEdit(false)" class="px-3 py-1 bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300 text-xs font-bold rounded-lg transition">취소</button>
-                  </div>
-                </div>
-
-                <button id="editBioBtn" onclick="toggleBioEdit(true)" class="text-[11px] font-bold text-pink-600 dark:text-pink-400 hover:underline inline-flex items-center gap-1 justify-center sm:justify-start">
-                  <i class="fa-solid fa-pen text-[10px]"></i> 프로필 소개 수정
-                </button>
-              </div>
-
-              <!-- Actions & Badge Request -->
-              <div class="pt-2 flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                <button id="badgeApplyBtn" onclick="requestVerifiedBadge()" class="px-3.5 py-1.5 picora-gradient-bg text-white text-xs font-bold rounded-xl shadow transition hover:opacity-95 disabled:opacity-50 disabled:cursor-not-allowed">
-                  공인 인증 체크마크 신청 (1,000 팔로워 필요)
-                </button>
-
-                <!-- Admin restricted Follower Boost -->
-                <button id="adminBoostBtn" onclick="simulateFollowerBoost()" class="hidden px-3 py-1.5 bg-indigo-100 hover:bg-indigo-200 dark:bg-indigo-950 dark:hover:bg-indigo-900 text-indigo-700 dark:text-indigo-300 text-xs font-bold rounded-xl transition border border-indigo-300/50">
-                  <i class="fa-solid fa-user-plus text-indigo-500 mr-1"></i> [관리자 전용] 팔로워 +500
-                </button>
-              </div>
-            </div>
+          <div class="flex justify-between items-center">
+            <input type="file" id="postFileInput" accept="image/*,video/*" class="text-xs" onchange="handleFileSelect(event)">
+            <button onclick="createPost()" class="bg-instaBlue text-white text-xs px-4 py-1.5 rounded font-semibold">게시</button>
           </div>
         </div>
 
-        <!-- My Feed Posts / Saved Grid -->
-        <div class="border-t border-gray-200 dark:border-darkBorder pt-4">
-          <h3 class="text-xs font-bold text-gray-500 dark:text-gray-400 uppercase tracking-wider mb-3 flex items-center gap-1">
-            <i class="fa-solid fa-grid-2"></i> 작성한 피드 게시물
-          </h3>
-          <div id="profilePostsGrid" class="grid grid-cols-3 gap-2">
-            <!-- Grid of profile posts -->
-          </div>
-        </div>
-      </section>
-
-    </main>
-  </div>
-
-  <!-- MODAL: CREATE NEW POST -->
-  <div id="createPostModal" class="hidden fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
-    <div class="bg-white dark:bg-darkCard w-full max-w-lg rounded-2xl shadow-2xl overflow-hidden border border-gray-200 dark:border-darkBorder animate-fade-in">
-      <div class="p-4 border-b border-gray-200 dark:border-darkBorder flex items-center justify-between">
-        <h3 class="font-bold text-sm text-gray-800 dark:text-white">새 게시물 만들기</h3>
-        <button onclick="closeCreateModal()" class="text-gray-400 hover:text-gray-600 dark:hover:text-white">
-          <i class="fa-solid fa-xmark text-lg"></i>
-        </button>
+        <!-- Feed Posts List -->
+        <div id="feedList" class="space-y-4"></div>
       </div>
 
-      <div class="p-4 space-y-4">
-        <textarea id="modalCaption" rows="3" placeholder="문구를 입력하세요... (#해시태그, @소환 가능)" class="w-full p-3 text-sm bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-2 focus:ring-pink-500 dark:text-white resize-none"></textarea>
+      <!-- Explore Tab -->
+      <div id="tabExplore" class="tab-content hidden p-2">
+        <h3 class="font-bold text-sm mb-3">🔥 추천 릴스 및 게시물</h3>
+        <div id="exploreGrid" class="grid grid-cols-3 gap-1"></div>
+      </div>
 
-        <!-- Dynamic Flexible Preview Container for Landscape & Portrait Videos/Images -->
-        <div id="modalMediaPreviewBox" class="hidden relative rounded-xl overflow-hidden bg-black max-h-96 flex items-center justify-center border border-gray-200 dark:border-gray-700">
-          <img id="modalImgPreview" class="hidden max-h-96 object-contain w-full filter-normal" alt="preview">
-          <video id="modalVidPreview" controls class="hidden max-h-96 w-full object-contain"></video>
+      <!-- DM Tab -->
+      <div id="tabDm" class="tab-content hidden bg-white dark:bg-instaCardDark border border-instaBorder dark:border-instaDarkBorder rounded-lg m-2 h-[500px] flex flex-col">
+        <div class="p-3 border-b border-instaBorder dark:border-instaDarkBorder font-bold text-sm">다이렉트 메시지 (DM)</div>
+        <div id="dmMessages" class="flex-1 p-3 overflow-y-auto space-y-2 custom-scrollbar text-xs"></div>
+        <div class="p-2 border-t border-instaBorder dark:border-instaDarkBorder flex gap-2">
+          <input type="text" id="dmInput" placeholder="메시지 입력..." class="flex-1 text-xs p-2 border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 focus:outline-none">
+          <button onclick="sendDM()" class="bg-instaBlue text-white text-xs px-3 py-1 rounded font-bold">전송</button>
         </div>
+      </div>
 
-        <!-- Filter Selector Options -->
-        <div id="filterSelectionBox" class="hidden space-y-1">
-          <label class="text-[11px] font-bold text-gray-500 dark:text-gray-400">사진 필터 선택</label>
-          <div class="flex space-x-2 overflow-x-auto pb-1 text-xs">
-            <button type="button" onclick="applyPhotoFilter('normal')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">원본</button>
-            <button type="button" onclick="applyPhotoFilter('grayscale')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">흑백</button>
-            <button type="button" onclick="applyPhotoFilter('sepia')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">세피아</button>
-            <button type="button" onclick="applyPhotoFilter('vintage')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">빈티지</button>
-            <button type="button" onclick="applyPhotoFilter('warm')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">따뜻함</button>
-            <button type="button" onclick="applyPhotoFilter('cool')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">시원함</button>
-            <button type="button" onclick="applyPhotoFilter('dramatic')" class="px-3 py-1 bg-gray-100 dark:bg-gray-800 rounded-lg text-gray-700 dark:text-gray-300 font-semibold flex-shrink-0">선명함</button>
+      <!-- Profile Tab -->
+      <div id="tabProfile" class="tab-content hidden p-4 bg-white dark:bg-instaCardDark border border-instaBorder dark:border-instaDarkBorder rounded-lg m-2">
+        <div class="flex items-center space-x-4 mb-4">
+          <div class="relative w-16 h-16 rounded-full overflow-hidden border border-gray-300 dark:border-gray-700 cursor-pointer group" onclick="triggerProfilePicUpload()">
+            <img id="profileAvatar" src="https://via.placeholder.com/150" class="w-full h-full object-cover">
+            <div class="absolute inset-0 bg-black/40 flex items-center justify-center text-white text-[10px] opacity-0 group-hover:opacity-100 transition">변경</div>
+          </div>
+          <div>
+            <div class="flex items-center space-x-1">
+              <span id="profileName" class="font-bold text-base"></span>
+              <span id="profileBadge" class="hidden badge-icon">✔</span>
+            </div>
+            <div class="text-xs text-gray-500">팔로워 <strong id="profileFollowers" class="text-black dark:text-white">0</strong>명</div>
+            <div class="mt-1 space-x-1">
+              <button id="badgeApplyBtn" onclick="applyBadge()" class="hidden text-[11px] bg-instaBlue text-white px-2 py-0.5 rounded font-semibold">체크마크 신청</button>
+              <button id="adminFollowerBtn" onclick="addAdminFollowers()" class="hidden text-[11px] bg-purple-600 text-white px-2 py-0.5 rounded font-semibold">[관리자 전용] 팔로워 +500</button>
+            </div>
           </div>
         </div>
 
-        <div class="flex items-center justify-between pt-2">
-          <label class="cursor-pointer flex items-center space-x-2 text-xs font-semibold text-pink-600 dark:text-pink-400 bg-pink-50 dark:bg-pink-950/40 px-3.5 py-2 rounded-xl hover:bg-pink-100 dark:hover:bg-pink-900/50 transition">
-            <i class="fa-solid fa-photo-film text-sm"></i>
-            <span>사진/동영상 선택</span>
-            <input type="file" id="modalFileInput" accept="image/*,video/*" onchange="handleModalFileSelect(event)" class="hidden">
-          </label>
-
-          <button onclick="submitNewPost()" class="px-5 py-2 picora-gradient-bg text-white text-xs font-bold rounded-xl shadow hover:opacity-95 transition">
-            공유하기
-          </button>
+        <!-- Editable Bio Section -->
+        <div class="mb-4 border-t border-b border-gray-100 dark:border-gray-800 py-3">
+          <div class="flex justify-between items-center mb-1">
+            <span class="text-xs font-bold text-gray-500">소개 (Bio)</span>
+            <button onclick="toggleBioEdit()" class="text-[11px] text-instaBlue">수정</button>
+          </div>
+          <p id="bioDisplay" class="text-xs text-gray-700 dark:text-gray-300 whitespace-pre-wrap">소개가 없습니다.</p>
+          <div id="bioEditBox" class="hidden mt-2">
+            <textarea id="bioInput" class="w-full text-xs p-2 border border-instaBorder dark:border-instaDarkBorder rounded bg-gray-50 dark:bg-gray-800 focus:outline-none resize-none h-16"></textarea>
+            <button onclick="saveBio()" class="mt-1 bg-instaBlue text-white text-[11px] px-3 py-1 rounded font-bold">저장</button>
+          </div>
         </div>
+
+        <h4 class="font-bold text-xs mb-2">내가 올린 게시물</h4>
+        <div id="profileGrid" class="grid grid-cols-3 gap-1"></div>
       </div>
+
     </div>
-  </div>
 
-  <!-- MODAL: STORY VIEWER -->
-  <div id="storyViewerModal" class="hidden fixed inset-0 z-50 bg-black/90 flex items-center justify-center p-4">
-    <div class="relative w-full max-w-sm h-[500px] bg-gray-900 rounded-2xl overflow-hidden flex flex-col justify-between border border-gray-800">
-      <button onclick="closeStoryViewer()" class="absolute top-3 right-3 text-white z-20 bg-black/40 w-8 h-8 rounded-full flex items-center justify-center">
-        <i class="fa-solid fa-xmark"></i>
-      </button>
+  </main>
 
-      <div class="p-3 bg-gradient-to-b from-black/80 to-transparent z-10 flex items-center space-x-2 text-white text-xs font-bold">
-        <span id="storyAuthorName">사용자</span>
-        <span class="text-[10px] text-gray-400">24시간 내 스토리</span>
-      </div>
-
-      <div id="storyContentArea" class="flex-1 flex items-center justify-center p-4 text-white text-center font-bold">
-        <!-- Story image or text -->
-      </div>
-    </div>
-  </div>
-
-  <!-- TOAST NOTIFICATION -->
-  <div id="toast" class="fixed bottom-20 md:bottom-6 right-6 bg-gray-900 dark:bg-white text-white dark:text-gray-900 px-4 py-3 rounded-2xl shadow-2xl text-xs font-semibold translate-y-20 opacity-0 transition-all duration-300 z-50 flex items-center space-x-2.5 pointer-events-none">
-    <i id="toastIcon" class="fa-solid fa-circle-info text-pink-400"></i>
-    <span id="toastMsg">알림 메시지</span>
-  </div>
-
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
-    import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
-    import { getFirestore, doc, collection, setDoc, updateDoc, deleteDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
-
-    // Application Config & Global Variables
+  <script>
+    // System Constants
     const ADMIN_ID = "instagramnice!!@456";
 
-    const appId = typeof __app_id !== 'undefined' ? __app_id : 'picora-app-v3';
-    const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
-      apiKey: "demo-api-key",
-      authDomain: "demo-app.firebaseapp.com",
-      projectId: "demo-app",
-      storageBucket: "demo-app.appspot.com",
-      messagingSenderId: "123456789",
-      appId: "1:123456789:web:123456"
-    };
+    // App State
+    let users = [];
+    let posts = [];
+    let stories = [];
+    let dmMessages = [];
+    let currentUser = null;
+    let isSignUpMode = false;
+    let selectedFilter = 'none';
 
-    const app = initializeApp(firebaseConfig);
-    const auth = getAuth(app);
-    const db = getFirestore(app);
-
-    // Strict Paths according to RULE 1
-    const usersCol = collection(db, 'artifacts', appId, 'public', 'data', 'users');
-    const postsCol = collection(db, 'artifacts', appId, 'public', 'data', 'posts');
-    const storiesCol = collection(db, 'artifacts', appId, 'public', 'data', 'stories');
-    const messagesCol = collection(db, 'artifacts', appId, 'public', 'data', 'messages');
-
-    // Global State
-    window.users = [];
-    window.posts = [];
-    window.stories = [];
-    window.messages = [];
-    window.currentUser = null;
-    window.activeDmRecipient = null;
-    window.isSignUpMode = false;
-    window.selectedMediaFilter = "normal";
-    window.modalMediaData = { src: null, type: null };
-    window.activeAdminTab = 'users';
-
-    async function initCloudSync() {
-      try {
-        if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
-          await signInWithCustomToken(auth, __initial_auth_token);
-        } else {
-          await signInAnonymously(auth);
-        }
-      } catch (e) {
-        console.warn("Auth initialization fallback:", e);
-      }
-
-      // Realtime User listener
-      onSnapshot(usersCol, (snapshot) => {
-        window.users = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        
-        // Ensure Admin user default exists
-        if (!window.users.some(u => u.id === ADMIN_ID)) {
-          saveUserToCloud({
-            id: ADMIN_ID,
-            name: "Picora_Admin",
-            followers: 5000,
-            hasBadge: true,
-            isAdmin: true
-          });
-        }
-
-        if (window.currentUser) {
-          const updatedSelf = window.users.find(u => u.id === window.currentUser.id);
-          if (updatedSelf) window.currentUser = updatedSelf;
-        }
-
-        renderCurrentView();
-      }, (err) => console.error("Users sync error", err));
-
-      // Realtime Posts listener
-      onSnapshot(postsCol, (snapshot) => {
-        window.posts = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.posts.sort((a, b) => (b.createdAtTime || 0) - (a.createdAtTime || 0));
-        renderCurrentView();
-      }, (err) => console.error("Posts sync error", err));
-
-      // Realtime Stories listener
-      onSnapshot(storiesCol, (snapshot) => {
-        window.stories = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.stories.sort((a, b) => (b.createdAtTime || 0) - (a.createdAtTime || 0));
-        renderStories();
-      }, (err) => console.error("Stories sync error", err));
-
-      // Realtime Messages listener
-      onSnapshot(messagesCol, (snapshot) => {
-        window.messages = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
-        window.messages.sort((a, b) => (a.createdAtTime || 0) - (b.createdAtTime || 0));
-        if (window.activeDmRecipient) renderChatMessages();
-      }, (err) => console.error("Messages sync error", err));
-    }
-
-    // Helper functions for Firestore Updates
-    async function saveUserToCloud(userObj) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', String(userObj.id)), userObj);
-    }
-
-    async function savePostToCloud(postObj) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', String(postObj.id)), postObj);
-    }
-
-    async function saveStoryToCloud(storyObj) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stories', String(storyObj.id)), storyObj);
-    }
-
-    async function saveMessageToCloud(msgObj) {
-      await setDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', String(msgObj.id)), msgObj);
-    }
-
-    window.initApp = function() {
-      initCloudSync();
-      const savedUser = sessionStorage.getItem('picora_current_user');
+    // Global Initializer
+    window.onload = () => {
+      // Load saved state
+      const savedUser = localStorage.getItem('picora_current_user');
       if (savedUser) {
-        try {
-          window.currentUser = JSON.parse(savedUser);
-          window.showMainApp();
-        } catch (e) {
-          window.showAuthView();
-        }
+        currentUser = JSON.parse(savedUser);
+        showApp();
       } else {
-        window.showAuthView();
+        showAuth();
       }
+      loadMockData();
     };
 
-    window.showAuthView = function() {
-      document.getElementById('authContainer').classList.remove('hidden');
-      document.getElementById('appContainer').classList.add('hidden');
-    };
+    function showToast(msg) {
+      const toast = document.getElementById('toast');
+      toast.textContent = msg;
+      toast.classList.remove('opacity-0');
+      setTimeout(() => toast.classList.add('opacity-0'), 2500);
+    }
 
-    window.showMainApp = function() {
-      document.getElementById('authContainer').classList.add('hidden');
-      document.getElementById('appContainer').classList.remove('hidden');
+    function toggleDarkMode() {
+      document.documentElement.classList.toggle('dark');
+    }
 
-      const navAvatar = document.getElementById('navAvatar');
-      if (navAvatar && window.currentUser) {
-        if (window.currentUser.avatarUrl) {
-          navAvatar.innerHTML = `<img src="${window.currentUser.avatarUrl}" class="w-full h-full object-cover">`;
-        } else {
-          navAvatar.textContent = window.currentUser.name.charAt(0).toUpperCase();
-        }
+    // Navigation & Tabs
+    function switchTab(tab) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      if (tab === 'feed') document.getElementById('tabFeed').classList.remove('hidden');
+      if (tab === 'explore') {
+        document.getElementById('tabExplore').classList.remove('hidden');
+        renderExplore();
       }
-
-      const guestNotice = document.getElementById('demoGuestNotice');
-      if (guestNotice) {
-        if (window.currentUser.isDemo) guestNotice.classList.remove('hidden');
-        else guestNotice.classList.add('hidden');
+      if (tab === 'dm') {
+        document.getElementById('tabDm').classList.remove('hidden');
+        renderDM();
       }
+      if (tab === 'profile') {
+        document.getElementById('tabProfile').classList.remove('hidden');
+        renderProfile();
+      }
+    }
 
-      window.switchTab('feed');
-    };
-
-    window.enterDemoMode = function() {
-      window.currentUser = {
-        id: 'demo_guest_' + Date.now(),
-        name: '체험자',
-        followers: 1200,
-        following: 15,
-        hasBadge: false,
-        isAdmin: false,
-        isDemo: true
-      };
+    // Auth Actions
+    function toggleAuthMode() {
+      isSignUpMode = !isSignUpMode;
+      document.getElementById('authBtn').textContent = isSignUpMode ? "회원가입" : "로그인";
+      document.getElementById('authToggle').textContent = isSignUpMode ? "계정이 있으신가요? 로그인" : "계정이 없으신가요? 회원가입";
       
-      saveUserToCloud(window.currentUser);
-      sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-      window.showToast("맛보기 체험 모드로 로그인되었습니다!", "fa-wand-magic-sparkles");
-      window.showMainApp();
-    };
+      document.querySelectorAll('.signup-only').forEach(el => el.classList.toggle('hidden', !isSignUpMode));
+      document.querySelectorAll('.pw-only').forEach(el => el.classList.toggle('hidden', isSignUpMode && false));
+    }
 
-    window.toggleAuthMode = function() {
-      window.isSignUpMode = !window.isSignUpMode;
-      const nicknameFieldGroup = document.getElementById('nicknameFieldGroup');
-      const submitBtn = document.getElementById('authSubmitBtn');
-      const toggleText = document.getElementById('authToggleText');
-      const toggleBtn = document.getElementById('authToggleBtn');
-
-      if (window.isSignUpMode) {
-        nicknameFieldGroup.classList.remove('hidden');
-        submitBtn.textContent = '회원가입';
-        toggleText.textContent = '이미 계정이 있으신가요?';
-        toggleBtn.textContent = '로그인';
-      } else {
-        nicknameFieldGroup.classList.add('hidden');
-        submitBtn.textContent = '로그인';
-        toggleText.textContent = '계정이 없으신가요?';
-        toggleBtn.textContent = '회원가입';
-      }
-    };
-
-    window.handleAuth = function(e) {
+    function handleAuth(e) {
       e.preventDefault();
       const id = document.getElementById('authId').value.trim();
       const pw = document.getElementById('authPw').value.trim();
       const name = document.getElementById('authName').value.trim();
 
-      if (window.isSignUpMode) {
-        if (!id) {
-          window.showToast("아이디를 입력해주세요.", "fa-triangle-exclamation");
-          return;
-        }
-        if (!name) {
-          window.showToast("사용할 닉네임을 입력해주세요.", "fa-triangle-exclamation");
-          return;
-        }
-        if (window.users.some(u => u.name.toLowerCase() === name.toLowerCase())) {
-          window.showToast("이미 사용 중인 닉네임입니다.", "fa-circle-exclamation");
-          return;
-        }
-        if (window.users.some(u => u.id === id)) {
-          window.showToast("이미 존재하는 아이디입니다.", "fa-circle-exclamation");
-          return;
-        }
-
-        const newUser = {
-          id,
-          pw,
-          name,
-          followers: 0,
-          following: 0,
-          hasBadge: false,
-          isAdmin: false
-        };
-
-        saveUserToCloud(newUser);
-        window.currentUser = newUser;
-        sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-        window.showToast("성공적으로 회원가입 되었습니다!", "fa-circle-check");
-        window.showMainApp();
-      } else {
-        if (id === ADMIN_ID) {
-          let adminUser = window.users.find(u => u.id === ADMIN_ID);
-          if (!adminUser) {
-            adminUser = { id: ADMIN_ID, name: "Picora_Admin", followers: 5000, following: 0, hasBadge: true, isAdmin: true };
-            saveUserToCloud(adminUser);
-          }
-          window.currentUser = adminUser;
-          sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-          window.showToast("관리자 계정으로 로그인하였습니다. (비밀번호 없음)", "fa-user-shield");
-          window.showMainApp();
-          return;
-        }
-
-        if (!id || !pw) {
-          window.showToast("아이디와 비밀번호를 입력해주세요.", "fa-triangle-exclamation");
-          return;
-        }
-
-        const user = window.users.find(u => u.id === id && u.pw === pw);
-        if (!user) {
-          window.showToast("아이디 또는 비밀번호가 올바르지 않습니다.", "fa-triangle-exclamation");
-          return;
-        }
-
-        window.currentUser = user;
-        sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-        window.showToast(`${window.currentUser.name}님 환영합니다!`, "fa-right-to-bracket");
-        window.showMainApp();
-      }
-    };
-
-    window.logout = function() {
-      window.currentUser = null;
-      sessionStorage.removeItem('picora_current_user');
-      window.showToast("로그아웃되었습니다.", "fa-right-from-bracket");
-      window.showAuthView();
-    };
-
-    window.switchTab = function(tabName) {
-      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
-      document.querySelectorAll('.nav-btn').forEach(btn => {
-        btn.classList.remove('text-pink-600', 'dark:text-pink-400');
-        btn.classList.add('text-gray-500', 'dark:text-gray-400');
-      });
-
-      const activeTab = document.getElementById(`tab-${tabName}`);
-      const activeNav = document.getElementById(`nav-${tabName}`);
-
-      if (activeTab) activeTab.classList.remove('hidden');
-      if (activeNav) {
-        activeNav.classList.remove('text-gray-500', 'dark:text-gray-400');
-        activeNav.classList.add('text-pink-600', 'dark:text-pink-400');
-      }
-
-      renderCurrentView(tabName);
-    };
-
-    function renderCurrentView(forcedTab) {
-      const activeTab = forcedTab || (document.querySelector('.tab-content:not(.hidden)')?.id?.replace('tab-', '') || 'feed');
-      if (activeTab === 'feed') {
-        renderStories();
-        renderFeed();
-        renderAdminDashboard();
-      } else if (activeTab === 'explore') {
-        renderExploreTab();
-      } else if (activeTab === 'reels') {
-        renderReelsTab();
-      } else if (activeTab === 'messages') {
-        renderMessagesTab();
-      } else if (activeTab === 'profile') {
-        renderProfileTab();
-      }
-    }
-
-    function renderAdminDashboard() {
-      const adminPanel = document.getElementById('adminPanel');
-      if (!adminPanel) return;
-
-      if (window.currentUser && window.currentUser.isAdmin) {
-        adminPanel.classList.remove('hidden');
-        document.getElementById('adminTotalUsers').textContent = `${window.users.length}명`;
-        document.getElementById('adminTotalPosts').textContent = `${window.posts.length}개`;
-        document.getElementById('adminTotalStories').textContent = `${window.stories.length}개`;
-        document.getElementById('adminTotalMessages').textContent = `${window.messages.length}개`;
-
-        renderAdminTabContent();
-      } else {
-        adminPanel.classList.add('hidden');
-      }
-    }
-
-    window.switchAdminTab = function(tabKey) {
-      window.activeAdminTab = tabKey;
-      document.querySelectorAll('[id^="adminTabBtn-"]').forEach(btn => {
-        btn.className = 'px-3 py-1.5 rounded-lg font-bold bg-white/10 text-indigo-200 hover:bg-white/20 transition';
-      });
-      const activeBtn = document.getElementById(`adminTabBtn-${tabKey}`);
-      if (activeBtn) activeBtn.className = 'px-3 py-1.5 rounded-lg font-bold bg-indigo-600 text-white transition';
-
-      document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
-      const activeContent = document.getElementById(`adminTab-${tabKey}`);
-      if (activeContent) activeContent.classList.remove('hidden');
-
-      renderAdminTabContent();
-    };
-
-    function renderAdminTabContent() {
-      if (!window.currentUser || !window.currentUser.isAdmin) return;
-
-      if (window.activeAdminTab === 'users') {
-        const container = document.getElementById('adminTab-users');
-        if (!container) return;
-        container.innerHTML = window.users.map(u => `
-          <div class="bg-white/10 p-2.5 rounded-xl border border-white/10 flex items-center justify-between text-xs">
-            <div>
-              <span class="font-bold text-white">${u.name}</span>
-              <span class="text-[10px] text-indigo-300 ml-1">(${u.id})</span>
-              ${u.hasBadge ? '<i class="fa-solid fa-circle-check text-blue-400 ml-1"></i>' : ''}
-              ${u.isAdmin ? '<span class="bg-indigo-500/40 text-indigo-200 px-1.5 py-0.5 rounded text-[9px] ml-1">최고관리자</span>' : ''}
-            </div>
-            <div class="flex items-center space-x-1">
-              <button onclick="adminToggleBadge('${u.id}')" class="px-2 py-1 bg-indigo-500/30 hover:bg-indigo-500/50 text-indigo-200 rounded text-[11px] font-bold">
-                ${u.hasBadge ? '인증 해제' : '인증 부여'}
-              </button>
-              ${!u.isAdmin ? `
-                <button onclick="adminDeleteUser('${u.id}')" class="px-2 py-1 bg-red-500/30 hover:bg-red-500/50 text-red-300 rounded text-[11px] font-bold">
-                  삭제
-                </button>
-              ` : ''}
-            </div>
-          </div>
-        `).join('') || `<p class="text-xs text-indigo-300 p-2">등록된 사용자가 없습니다.</p>`;
-      } else if (window.activeAdminTab === 'posts') {
-        const container = document.getElementById('adminTab-posts');
-        if (!container) return;
-        container.innerHTML = window.posts.map(p => `
-          <div class="bg-white/10 p-2.5 rounded-xl border border-white/10 flex items-center justify-between text-xs">
-            <div class="truncate max-w-[70%]">
-              <span class="font-bold text-indigo-200">${p.authorName}:</span>
-              <span class="text-white ml-1">${p.caption || '(미디어 게시물)'}</span>
-            </div>
-            <button onclick="adminDeletePost('${p.id}')" class="px-2 py-1 bg-red-500/30 hover:bg-red-500/50 text-red-300 rounded text-[11px] font-bold">
-              삭제
-            </button>
-          </div>
-        `).join('') || `<p class="text-xs text-indigo-300 p-2">등록된 게시물이 없습니다.</p>`;
-      } else if (window.activeAdminTab === 'stories') {
-        const container = document.getElementById('adminTab-stories');
-        if (!container) return;
-        container.innerHTML = window.stories.map(s => `
-          <div class="bg-white/10 p-2.5 rounded-xl border border-white/10 flex items-center justify-between text-xs">
-            <div class="truncate max-w-[70%]">
-              <span class="font-bold text-indigo-200">${s.authorName}:</span>
-              <span class="text-white ml-1">${s.text || '스토리'}</span>
-            </div>
-            <button onclick="adminDeleteStory('${s.id}')" class="px-2 py-1 bg-red-500/30 hover:bg-red-500/50 text-red-300 rounded text-[11px] font-bold">
-              삭제
-            </button>
-          </div>
-        `).join('') || `<p class="text-xs text-indigo-300 p-2">등록된 스토리가 없습니다.</p>`;
-      } else if (window.activeAdminTab === 'messages') {
-        const container = document.getElementById('adminTab-messages');
-        if (!container) return;
-        container.innerHTML = window.messages.map(m => `
-          <div class="bg-white/10 p-2.5 rounded-xl border border-white/10 flex items-center justify-between text-xs">
-            <div class="truncate max-w-[70%]">
-              <span class="font-bold text-indigo-200">${m.from} → ${m.to}:</span>
-              <span class="text-white ml-1">${m.text}</span>
-            </div>
-            <button onclick="adminDeleteMessage('${m.id}')" class="px-2 py-1 bg-red-500/30 hover:bg-red-500/50 text-red-300 rounded text-[11px] font-bold">
-              삭제
-            </button>
-          </div>
-        `).join('') || `<p class="text-xs text-indigo-300 p-2">전송된 메시지가 없습니다.</p>`;
-      }
-    }
-
-    window.adminToggleBadge = async function(userId) {
-      const targetUser = window.users.find(u => u.id === userId);
-      if (targetUser) {
-        await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', String(userId)), {
-          hasBadge: !targetUser.hasBadge
-        });
-        window.showToast("사용자 인증 상태가 변경되었습니다.", "fa-circle-check");
-      }
-    };
-
-    window.adminDeleteUser = async function(userId) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'users', String(userId)));
-      window.showToast("사용자가 삭제되었습니다.", "fa-trash");
-    };
-
-    window.adminDeletePost = async function(postId) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', String(postId)));
-      window.showToast("게시물이 삭제되었습니다.", "fa-trash");
-    };
-
-    window.adminDeleteStory = async function(storyId) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'stories', String(storyId)));
-      window.showToast("스토리가 삭제되었습니다.", "fa-trash");
-    };
-
-    window.adminDeleteMessage = async function(msgId) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'messages', String(msgId)));
-      window.showToast("메시지가 삭제되었습니다.", "fa-trash");
-    };
-
-    window.toggleDarkMode = function() {
-      document.documentElement.classList.toggle('dark');
-    };
-
-    window.showToast = function(msg, iconClass = "fa-circle-info") {
-      const toast = document.getElementById('toast');
-      const toastMsg = document.getElementById('toastMsg');
-      const toastIcon = document.getElementById('toastIcon');
-
-      if (!toast || !toastMsg || !toastIcon) return;
-
-      toastMsg.textContent = msg;
-      toastIcon.className = `fa-solid ${iconClass} text-pink-400`;
-
-      toast.classList.remove('translate-y-20', 'opacity-0');
-      toast.classList.add('translate-y-0', 'opacity-100');
-
-      setTimeout(() => {
-        toast.classList.remove('translate-y-0', 'opacity-100');
-        toast.classList.add('translate-y-20', 'opacity-0');
-      }, 3000);
-    };
-
-    function renderStories() {
-      const container = document.getElementById('storiesContainer');
-      if (!container) return;
-
-      container.innerHTML = '';
-      window.stories.forEach((story, index) => {
-        const div = document.createElement('div');
-        div.className = 'flex flex-col items-center space-y-1 cursor-pointer flex-shrink-0 group';
-        div.onclick = () => window.openStoryViewer(index);
-        div.innerHTML = `
-          <div class="picora-story-ring rounded-full p-[2px] group-hover:scale-105 transition">
-            <div class="w-12 h-12 rounded-full bg-white dark:bg-darkCard flex items-center justify-center text-xs font-bold text-gray-800 dark:text-white uppercase">
-              ${(story.authorName || 'U').charAt(0)}
-            </div>
-          </div>
-          <span class="text-[10px] font-semibold text-gray-700 dark:text-gray-300 max-w-[60px] truncate text-center">${story.authorName}</span>
-        `;
-        container.appendChild(div);
-      });
-    }
-
-    function renderFeed() {
-      const feed = document.getElementById('feedStream');
-      if (!feed) return;
-      feed.innerHTML = '';
-
-      if (window.posts.length === 0) {
-        feed.innerHTML = `
-          <div class="text-center py-16 bg-white dark:bg-darkCard rounded-2xl border border-gray-200 dark:border-darkBorder p-8 space-y-3">
-            <i class="fa-solid fa-camera-retro text-4xl text-gray-300 dark:text-gray-600"></i>
-            <h3 class="font-bold text-gray-700 dark:text-gray-300 text-sm">등록된 피드가 없습니다</h3>
-            <p class="text-xs text-gray-400">좌측 메뉴의 [만들기] 버튼을 눌러 첫 피드를 업로드해보세요!</p>
-          </div>
-        `;
+      if (id === ADMIN_ID) {
+        currentUser = { id: ADMIN_ID, name: "관리자", followers: 9999, hasBadge: true, isAdmin: true, bio: "Picora 공식 관리자 계정입니다.", avatar: "https://via.placeholder.com/150/0095f6/ffffff?text=ADMIN" };
+        saveCurrentUser();
+        showApp();
+        showToast("관리자로 로그인되었습니다.");
         return;
       }
 
-      const fragment = document.createDocumentFragment();
+      if (isSignUpMode) {
+        if (!name) return alert("닉네임을 입력하세요.");
+        if (users.some(u => u.name === name)) return alert("이미 사용 중인 닉네임입니다.");
+        if (users.some(u => u.id === id)) return alert("이미 존재하는 아이디입니다.");
 
-      window.posts.forEach(post => {
-        const isLiked = post.likedBy && post.likedBy.includes(window.currentUser?.id);
-        const postCard = document.createElement('article');
-        postCard.id = `post-card-${post.id}`;
-        postCard.className = 'post-card bg-white dark:bg-darkCard border border-gray-200 dark:border-darkBorder rounded-2xl overflow-hidden shadow-sm transition';
-
-        /* Dynamic image/video display supporting both landscape and portrait orientations */
-        const authorUser = window.users.find(u => u.id === post.authorId);
-        const avatarUrl = authorUser?.avatarUrl || post.authorAvatar;
-        
-        let authorAvatarHtml = avatarUrl 
-          ? `<img src="${avatarUrl}" class="w-full h-full object-cover">`
-          : (post.authorName || 'U').charAt(0);
-
-        let mediaHtml = post.mediaSrc ? `
-          <div class="bg-black max-h-[520px] w-full flex items-center justify-center overflow-hidden">
-            ${post.mediaType === 'video' ? 
-              `<video src="${post.mediaSrc}" controls preload="metadata" class="w-full max-h-[520px] object-contain"></video>` :
-              `<img src="${post.mediaSrc}" loading="lazy" class="w-full max-h-[520px] object-contain filter-${post.filter || 'normal'}">`
-            }
-          </div>
-        ` : '';
-
-        let formattedCaption = post.caption || '';
-        formattedCaption = formattedCaption.replace(/#([\w가-힣]+)/g, '<span class="hashtag">#$1</span>');
-        formattedCaption = formattedCaption.replace(/@([\w가-힣]+)/g, '<span class="mention">@$1</span>');
-
-        postCard.innerHTML = `
-          <div class="p-3.5 flex items-center justify-between border-b border-gray-100 dark:border-gray-800">
-            <div class="flex items-center space-x-2.5">
-              <div class="w-8 h-8 rounded-full picora-gradient-bg flex items-center justify-center text-white text-xs font-bold uppercase overflow-hidden">
-                ${authorAvatarHtml}
-              </div>
-              <div>
-                <div class="flex items-center space-x-1">
-                  <span class="text-xs font-bold text-gray-900 dark:text-white">${post.authorName}</span>
-                  ${post.authorBadge ? '<i class="fa-solid fa-circle-check text-blue-500 text-xs"></i>' : ''}
-                </div>
-                <p class="text-[10px] text-gray-400">${post.createdAt || '방금 전'}</p>
-              </div>
-            </div>
-            ${(post.authorId === window.currentUser?.id || window.currentUser?.isAdmin) ? `
-              <button onclick="deletePost('${post.id}')" class="text-xs text-gray-400 hover:text-red-500 p-1">
-                <i class="fa-solid fa-trash"></i>
-              </button>
-            ` : ''}
-          </div>
-
-          ${mediaHtml}
-
-          <div class="p-3.5 space-y-2">
-            <div class="flex items-center space-x-4 text-xl">
-              <button onclick="toggleLike('${post.id}')" id="like-btn-${post.id}" class="focus:outline-none transition active:scale-125">
-                <i class="${isLiked ? 'fa-solid text-red-500' : 'fa-regular text-gray-700 dark:text-gray-200'} fa-heart"></i>
-              </button>
-              <button onclick="document.getElementById('comment-input-${post.id}').focus()" class="focus:outline-none">
-                <i class="fa-regular fa-comment text-gray-700 dark:text-gray-200"></i>
-              </button>
-            </div>
-
-            <p class="text-xs font-bold text-gray-900 dark:text-white" id="like-count-${post.id}">좋아요 ${post.likes || 0}개</p>
-
-            ${post.caption ? `
-              <div class="text-xs leading-relaxed text-gray-800 dark:text-gray-200">
-                <strong class="mr-1 text-gray-900 dark:text-white">${post.authorName}</strong>
-                ${formattedCaption}
-              </div>
-            ` : ''}
-
-            <div class="pt-1 space-y-1 max-h-28 overflow-y-auto" id="comments-box-${post.id}">
-              ${renderCommentsList(post.comments || [])}
-            </div>
-
-            <form onsubmit="addComment(event, '${post.id}')" class="pt-2 border-t border-gray-100 dark:border-gray-800 flex items-center space-x-2">
-              <input type="text" id="comment-input-${post.id}" placeholder="댓글 달기..." class="flex-1 text-xs py-1.5 px-3 bg-gray-50 dark:bg-gray-800 border border-gray-200 dark:border-gray-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-pink-500 dark:text-white">
-              <button type="submit" class="text-xs font-bold text-pink-600 dark:text-pink-400 px-2 py-1">
-                게시
-              </button>
-            </form>
-          </div>
-        `;
-
-        fragment.appendChild(postCard);
-      });
-
-      feed.appendChild(fragment);
-    }
-
-    function renderCommentsList(comments) {
-      return comments.map(c => `
-        <div class="text-xs py-0.5 space-x-1">
-          <strong class="text-gray-900 dark:text-white">${c.author}</strong>
-          ${c.badge ? '<i class="fa-solid fa-circle-check text-blue-500 text-[10px]"></i>' : ''}
-          <span class="text-gray-700 dark:text-gray-300">${c.text}</span>
-        </div>
-      `).join('');
-    }
-
-    window.toggleLike = async function(postId) {
-      if (!window.currentUser) return;
-      const post = window.posts.find(p => String(p.id) === String(postId));
-      if (!post) return;
-
-      let likedBy = post.likedBy || [];
-      const idx = likedBy.indexOf(window.currentUser.id);
-
-      if (idx === -1) {
-        likedBy.push(window.currentUser.id);
+        const newUser = { id, pw, name, followers: 0, hasBadge: false, isAdmin: false, bio: "", avatar: "https://via.placeholder.com/150" };
+        users.push(newUser);
+        currentUser = newUser;
+        saveUsers();
+        saveCurrentUser();
+        showApp();
       } else {
-        likedBy.splice(idx, 1);
+        const user = users.find(u => u.id === id && u.pw === pw);
+        if (!user) return alert("아이디 또는 비밀번호가 잘못되었습니다.");
+        currentUser = user;
+        saveCurrentUser();
+        showApp();
+      }
+    }
+
+    function enterDemoMode() {
+      currentUser = { id: "demo_guest", name: "게스트", followers: 150, hasBadge: false, isAdmin: false, bio: "맛보기 게스트 계정입니다.", avatar: "https://via.placeholder.com/150" };
+      showApp();
+      showToast("맛보기 모드로 접속했습니다.");
+    }
+
+    function logout() {
+      currentUser = null;
+      localStorage.removeItem('picora_current_user');
+      showAuth();
+    }
+
+    function showAuth() {
+      document.getElementById('authView').classList.remove('hidden');
+      document.getElementById('appView').classList.add('hidden');
+      document.getElementById('headerNav').classList.add('hidden');
+    }
+
+    function showApp() {
+      document.getElementById('authView').classList.add('hidden');
+      document.getElementById('appView').classList.remove('hidden');
+      document.getElementById('headerNav').classList.remove('hidden');
+
+      if (currentUser.isAdmin) {
+        document.getElementById('adminPanel').classList.remove('hidden');
+        renderAdmin();
+      } else {
+        document.getElementById('adminPanel').classList.add('hidden');
       }
 
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', String(postId)), {
-        likedBy,
-        likes: likedBy.length
+      updateStoryAvatar();
+      renderFeed();
+      switchTab('feed');
+    }
+
+    // Profile & Bio Functions
+    function renderProfile() {
+      document.getElementById('profileName').textContent = currentUser.name;
+      document.getElementById('profileAvatar').src = currentUser.avatar || "https://via.placeholder.com/150";
+      document.getElementById('profileFollowers').textContent = currentUser.followers;
+      document.getElementById('bioDisplay').textContent = currentUser.bio || "소개가 없습니다.";
+      document.getElementById('bioInput').value = currentUser.bio || "";
+      
+      const badgeEl = document.getElementById('profileBadge');
+      if (currentUser.hasBadge) badgeEl.classList.remove('hidden');
+      else badgeEl.classList.add('hidden');
+
+      const applyBtn = document.getElementById('badgeApplyBtn');
+      if (!currentUser.hasBadge && (currentUser.followers >= 1000 || currentUser.isAdmin)) {
+        applyBtn.classList.remove('hidden');
+      } else {
+        applyBtn.classList.add('hidden');
+      }
+
+      const adminBtn = document.getElementById('adminFollowerBtn');
+      if (currentUser.isAdmin) adminBtn.classList.remove('hidden');
+      else adminBtn.classList.add('hidden');
+
+      // Profile grid media
+      const profileGrid = document.getElementById('profileGrid');
+      profileGrid.innerHTML = '';
+      const myPosts = posts.filter(p => p.author === currentUser.name);
+      myPosts.forEach(p => {
+        const div = document.createElement('div');
+        div.className = "aspect-square bg-gray-100 dark:bg-gray-800 overflow-hidden";
+        if (p.mediaSrc) {
+          if (p.mediaType === 'video') {
+            div.innerHTML = `<video src="${p.mediaSrc}" class="w-full h-full object-cover"></video>`;
+          } else {
+            div.innerHTML = `<img src="${p.mediaSrc}" class="w-full h-full object-cover" style="filter: ${p.filter || 'none'}">`;
+          }
+        } else {
+          div.className = "aspect-square bg-gray-200 dark:bg-gray-800 p-2 text-[10px] overflow-hidden flex items-center justify-center text-center";
+          div.textContent = p.caption;
+        }
+        profileGrid.appendChild(div);
       });
-    };
+    }
 
-    window.addComment = async function(e, postId) {
-      if (e) e.preventDefault();
-      if (!window.currentUser) return;
+    function triggerProfilePicUpload() {
+      document.getElementById('profilePicInput').click();
+    }
 
-      const input = document.getElementById(`comment-input-${postId}`);
-      if (!input) return;
-
-      const text = input.value.trim();
-      if (!text) return;
-
-      const post = window.posts.find(p => String(p.id) === String(postId));
-      if (!post) return;
-
-      const comments = post.comments || [];
-      comments.push({
-        author: window.currentUser.name,
-        badge: !!window.currentUser.hasBadge,
-        text
-      });
-
-      await updateDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', String(postId)), {
-        comments
-      });
-
-      input.value = '';
-    };
-
-    window.deletePost = async function(postId) {
-      await deleteDoc(doc(db, 'artifacts', appId, 'public', 'data', 'posts', String(postId)));
-      window.showToast("게시물이 삭제되었습니다.", "fa-trash");
-    };
-
-    window.handleModalFileSelect = function(e) {
+    function handleProfilePicUpload(e) {
       const file = e.target.files[0];
       if (!file) return;
 
-      const isVideo = file.type.startsWith('video');
-      const previewBox = document.getElementById('modalMediaPreviewBox');
-      const imgPreview = document.getElementById('modalImgPreview');
-      const vidPreview = document.getElementById('modalVidPreview');
-      const filterBox = document.getElementById('filterSelectionBox');
-
       const reader = new FileReader();
-      reader.onload = function(event) {
-        window.modalMediaData.src = event.target.result;
-        window.modalMediaData.type = isVideo ? 'video' : 'image';
-
-        previewBox.classList.remove('hidden');
-        if (isVideo) {
-          imgPreview.classList.add('hidden');
-          filterBox.classList.add('hidden');
-          vidPreview.classList.remove('hidden');
-          vidPreview.src = window.modalMediaData.src;
-        } else {
-          vidPreview.classList.add('hidden');
-          filterBox.classList.remove('hidden');
-          imgPreview.classList.remove('hidden');
-          imgPreview.src = window.modalMediaData.src;
-        }
+      reader.onload = (evt) => {
+        currentUser.avatar = evt.target.result;
+        saveCurrentUser();
+        updateUserInList(currentUser);
+        renderProfile();
+        updateStoryAvatar();
+        showToast("프로필 사진이 변경되었습니다.");
       };
       reader.readAsDataURL(file);
-    };
+    }
 
-    window.applyPhotoFilter = function(filterName) {
-      window.selectedMediaFilter = filterName;
-      const img = document.getElementById('modalImgPreview');
-      img.className = `max-h-72 object-contain w-full filter-${filterName}`;
-    };
+    function toggleBioEdit() {
+      document.getElementById('bioEditBox').classList.toggle('hidden');
+    }
 
-    window.openCreateModal = function() {
-      document.getElementById('createPostModal').classList.remove('hidden');
-    };
+    function saveBio() {
+      const newBio = document.getElementById('bioInput').value.trim();
+      currentUser.bio = newBio;
+      saveCurrentUser();
+      updateUserInList(currentUser);
+      document.getElementById('bioEditBox').classList.add('hidden');
+      renderProfile();
+      showToast("프로필 소개가 저장되었습니다.");
+    }
 
-    window.closeCreateModal = function() {
-      document.getElementById('createPostModal').classList.add('hidden');
-      window.modalMediaData = { src: null, type: null };
-      window.selectedMediaFilter = "normal";
-      document.getElementById('modalCaption').value = '';
-      document.getElementById('modalFileInput').value = '';
-      document.getElementById('modalMediaPreviewBox').classList.add('hidden');
-    };
+    function applyBadge() {
+      currentUser.hasBadge = true;
+      saveCurrentUser();
+      updateUserInList(currentUser);
+      renderProfile();
+      renderFeed();
+      showToast("체크마크(인증 마크)가 발급되었습니다!");
+    }
 
-    window.submitNewPost = async function() {
-      const caption = document.getElementById('modalCaption').value.trim();
+    function addAdminFollowers() {
+      if (!currentUser.isAdmin) return;
+      currentUser.followers += 500;
+      saveCurrentUser();
+      renderProfile();
+      showToast("팔로워 +500 증가했습니다.");
+    }
 
-      if (!caption && !window.modalMediaData.src) {
-        window.showToast("게시할 내용이나 사진/동영상을 첨부하세요.", "fa-circle-info");
-        return;
+    // Post Creation & Feed
+    function handleFileSelect(e) {
+      const file = e.target.files[0];
+      if (file && file.type.startsWith('image')) {
+        document.getElementById('filterSelection').classList.remove('hidden');
+      } else {
+        document.getElementById('filterSelection').classList.add('hidden');
       }
+    }
 
-      const postTime = Date.now();
+    function setPostFilter(filterStr) {
+      selectedFilter = filterStr;
+      showToast("필터가 선택되었습니다.");
+    }
+
+    function createPost() {
+      const caption = document.getElementById('postCaption').value.trim();
+      const fileInput = document.getElementById('postFileInput');
+      const file = fileInput.files[0];
+
+      if (!caption && !file) return alert("내용 또는 파일 파일을 등록하세요.");
+
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          const type = file.type.startsWith('video') ? 'video' : 'image';
+          savePost(caption, e.target.result, type);
+        };
+        reader.readAsDataURL(file);
+      } else {
+        savePost(caption, null, null);
+      }
+    }
+
+    function savePost(caption, mediaSrc, mediaType) {
       const newPost = {
-        id: String(postTime),
-        authorId: window.currentUser.id,
-        authorName: window.currentUser.name,
-        authorBadge: !!window.currentUser.hasBadge,
+        id: Date.now(),
+        author: currentUser.name,
+        avatar: currentUser.avatar || "https://via.placeholder.com/150",
+        hasBadge: currentUser.hasBadge,
         caption,
-        mediaSrc: window.modalMediaData.src,
-        mediaType: window.modalMediaData.type,
-        filter: window.selectedMediaFilter,
-        createdAt: "방금 전",
-        createdAtTime: postTime,
+        mediaSrc,
+        mediaType,
+        filter: selectedFilter,
         likes: 0,
         likedBy: [],
         comments: []
       };
 
-      await savePostToCloud(newPost);
-      window.closeCreateModal();
-      window.showToast("새 피드가 성공적으로 공유되었습니다!", "fa-paper-plane");
-      window.switchTab('feed');
-    };
+      posts.unshift(newPost);
+      savePosts();
+      document.getElementById('postCaption').value = '';
+      document.getElementById('postFileInput').value = '';
+      document.getElementById('filterSelection').classList.add('hidden');
+      selectedFilter = 'none';
+      renderFeed();
+      showToast("게시물이 등록되었습니다.");
+    }
 
-    window.openStoryViewer = function(index) {
-      const story = window.stories[index];
-      if (!story) return;
+    function renderFeed() {
+      const feedList = document.getElementById('feedList');
+      feedList.innerHTML = '';
 
-      document.getElementById('storyAuthorName').textContent = story.authorName;
-      const content = document.getElementById('storyContentArea');
-      
-      if (story.mediaSrc) {
-        content.innerHTML = `<img src="${story.mediaSrc}" class="max-h-96 object-contain rounded-xl">`;
-      } else {
-        content.textContent = story.text || "스토리 내용이 없습니다.";
-      }
+      posts.forEach(post => {
+        const el = document.createElement('div');
+        el.className = "bg-white dark:bg-instaCardDark border-b border-instaBorder dark:border-instaDarkBorder pb-3";
 
-      document.getElementById('storyViewerModal').classList.remove('hidden');
-    };
+        const badgeHTML = post.hasBadge ? '<span class="badge-icon">✔</span>' : '';
+        let mediaHTML = '';
 
-    window.closeStoryViewer = function() {
-      document.getElementById('storyViewerModal').classList.add('hidden');
-    };
-
-    window.openStoryUploadModal = async function() {
-      const text = prompt("스토리에 남길 간단한 문구를 입력하세요:");
-      if (!text) return;
-
-      const storyTime = Date.now();
-      const newStory = {
-        id: String(storyTime),
-        authorId: window.currentUser.id,
-        authorName: window.currentUser.name,
-        text,
-        createdAtTime: storyTime,
-        createdAt: new Date().toLocaleTimeString()
-      };
-
-      await saveStoryToCloud(newStory);
-      window.showToast("새 스토리가 업로드되었습니다!", "fa-circle-check");
-    };
-
-    function renderExploreTab() {
-      const grid = document.getElementById('exploreGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      if (window.posts.length === 0) {
-        grid.innerHTML = `<p class="col-span-3 text-center text-xs text-gray-400 py-10">탐색할 포스트가 없습니다.</p>`;
-        return;
-      }
-
-      window.posts.forEach(post => {
-        if (!post.mediaSrc) return;
-        const item = document.createElement('div');
-        item.className = 'relative aspect-square bg-black overflow-hidden group cursor-pointer rounded-lg';
-        
-        if (post.mediaType === 'video') {
-          item.innerHTML = `<video src="${post.mediaSrc}" class="w-full h-full object-cover opacity-90"></video>`;
-        } else {
-          item.innerHTML = `<img src="${post.mediaSrc}" class="w-full h-full object-cover group-hover:scale-105 transition duration-300">`;
+        // Flexible support for both landscape & portrait orientation
+        if (post.mediaSrc) {
+          if (post.mediaType === 'video') {
+            mediaHTML = `<div class="w-full bg-black flex justify-center max-h-[520px]">
+              <video src="${post.mediaSrc}" controls class="w-full max-h-[520px] object-contain"></video>
+            </div>`;
+          } else {
+            mediaHTML = `<div class="w-full bg-black flex justify-center max-h-[520px]">
+              <img src="${post.mediaSrc}" class="w-full max-h-[520px] object-contain" style="filter: ${post.filter || 'none'}">
+            </div>`;
+          }
         }
 
-        grid.appendChild(item);
-      });
-    }
-
-    window.handleExploreSearch = function() {
-      const term = document.getElementById('exploreSearchInput').value.toLowerCase();
-      const grid = document.getElementById('exploreGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      const filtered = window.posts.filter(p => 
-        (p.caption && p.caption.toLowerCase().includes(term)) ||
-        (p.authorName && p.authorName.toLowerCase().includes(term))
-      );
-
-      filtered.forEach(post => {
-        if (!post.mediaSrc) return;
-        const item = document.createElement('div');
-        item.className = 'relative aspect-square bg-black overflow-hidden rounded-lg';
-        item.innerHTML = `<img src="${post.mediaSrc}" class="w-full h-full object-cover">`;
-        grid.appendChild(item);
-      });
-    };
-
-    function renderReelsTab() {
-      const container = document.getElementById('reelsContainer');
-      if (!container) return;
-      container.innerHTML = '';
-
-      const videoPosts = window.posts.filter(p => p.mediaType === 'video');
-
-      if (videoPosts.length === 0) {
-        container.innerHTML = `
-          <div class="text-center py-16 bg-white dark:bg-darkCard rounded-2xl border border-gray-200 dark:border-darkBorder p-6">
-            <i class="fa-solid fa-film text-4xl text-gray-300 mb-2"></i>
-            <p class="text-xs font-bold text-gray-600 dark:text-gray-300">등록된 릴스 동영상이 없습니다.</p>
-            <p class="text-[11px] text-gray-400 mt-1">[만들기]에서 동영상 파일을 올릴 수 있습니다.</p>
-          </div>
-        `;
-        return;
-      }
-
-      videoPosts.forEach(post => {
-        const reelCard = document.createElement('div');
-        reelCard.className = 'bg-black rounded-2xl overflow-hidden shadow-xl aspect-[9/16] relative flex items-center justify-center';
-        reelCard.innerHTML = `
-          <video src="${post.mediaSrc}" controls class="w-full h-full object-cover"></video>
-          <div class="absolute bottom-4 left-4 text-white text-xs z-10 space-y-1">
-            <p class="font-bold flex items-center gap-1">${post.authorName} ${post.authorBadge ? '✔' : ''}</p>
-            <p class="text-[11px] opacity-90">${post.caption}</p>
-          </div>
-        `;
-        container.appendChild(reelCard);
-      });
-    }
-
-    function renderMessagesTab() {
-      const list = document.getElementById('dmUserList');
-      if (!list) return;
-      list.innerHTML = '';
-
-      const otherUsers = window.users.filter(u => u.id !== window.currentUser?.id);
-
-      if (otherUsers.length === 0) {
-        list.innerHTML = `<div class="p-4 text-xs text-gray-400 text-center">대화 가능한 다른 사용자가 없습니다.</div>`;
-        return;
-      }
-
-      otherUsers.forEach(u => {
-        const item = document.createElement('div');
-        item.className = 'p-3 hover:bg-gray-100 dark:hover:bg-gray-800 cursor-pointer flex items-center space-x-2.5 transition';
-        item.onclick = () => window.selectDmUser(u);
-        item.innerHTML = `
-          <div class="w-8 h-8 rounded-full picora-gradient-bg flex items-center justify-center text-white font-bold text-xs">
-            ${(u.name || 'U').charAt(0)}
-          </div>
+        const commentsHTML = post.comments.map(c => `
           <div class="text-xs">
-            <p class="font-bold text-gray-800 dark:text-white">${u.name}</p>
-            <p class="text-[10px] text-gray-400">대화하기</p>
+            <strong>${c.author}</strong> ${c.text}
+          </div>
+        `).join('');
+
+        const isLiked = post.likedBy && post.likedBy.includes(currentUser.name);
+
+        el.innerHTML = `
+          <div class="flex items-center space-x-2 p-3">
+            <img src="${post.avatar || 'https://via.placeholder.com/150'}" class="w-8 h-8 rounded-full object-cover">
+            <span class="font-bold text-xs">${post.author}</span>${badgeHTML}
+          </div>
+          ${mediaHTML}
+          <div class="p-3">
+            <div class="flex items-center space-x-3 text-lg mb-1">
+              <button onclick="toggleLike(${post.id})">${isLiked ? '❤️' : '🤍'}</button>
+              <button onclick="focusComment(${post.id})">💬</button>
+            </div>
+            <div class="text-xs font-bold mb-1">좋아요 <span id="likeCount-${post.id}">${post.likes || 0}</span>개</div>
+            <div class="text-xs mb-2"><strong>${post.author}</strong> ${post.caption}</div>
+            <div class="space-y-1 mb-2 max-h-24 overflow-y-auto custom-scrollbar" id="comments-${post.id}">${commentsHTML}</div>
+            <div class="flex gap-2 border-t border-gray-100 dark:border-gray-800 pt-2">
+              <input type="text" id="commentInput-${post.id}" placeholder="댓글 달기..." class="flex-1 text-xs bg-transparent focus:outline-none">
+              <button onclick="addComment(${post.id})" class="text-xs text-instaBlue font-bold">게시</button>
+            </div>
           </div>
         `;
-        list.appendChild(item);
+        feedList.appendChild(el);
       });
     }
 
-    window.selectDmUser = function(targetUser) {
-      window.activeDmRecipient = targetUser;
-      document.getElementById('chatHeader').innerHTML = `
-        <span>${targetUser.name} 님과의 대화</span>
-        ${targetUser.hasBadge ? '<i class="fa-solid fa-circle-check text-blue-500"></i>' : ''}
-      `;
+    function toggleLike(postId) {
+      const post = posts.find(p => p.id === postId);
+      if (!post) return;
+      if (!post.likedBy) post.likedBy = [];
 
-      document.getElementById('dmInput').disabled = false;
-      document.getElementById('dmSendBtn').disabled = false;
-
-      renderChatMessages();
-    };
-
-    function renderChatMessages() {
-      if (!window.activeDmRecipient || !window.currentUser) return;
-
-      const log = document.getElementById('chatMessagesLog');
-      if (!log) return;
-      log.innerHTML = '';
-
-      const conversation = window.messages.filter(m => 
-        (m.from === window.currentUser.id && m.to === window.activeDmRecipient.id) ||
-        (m.from === window.activeDmRecipient.id && m.to === window.currentUser.id)
-      );
-
-      if (conversation.length === 0) {
-        log.innerHTML = `<div class="text-center text-gray-400 py-8">메시지를 보내 인사를 나누어 보세요!</div>`;
-        return;
+      const idx = post.likedBy.indexOf(currentUser.name);
+      if (idx === -1) {
+        post.likedBy.push(currentUser.name);
+        post.likes = (post.likes || 0) + 1;
+      } else {
+        post.likedBy.splice(idx, 1);
+        post.likes = Math.max(0, (post.likes || 1) - 1);
       }
+      savePosts();
+      renderFeed();
+    }
 
-      conversation.forEach(m => {
-        const isMe = m.from === window.currentUser.id;
-        const bubble = document.createElement('div');
-        bubble.className = `flex ${isMe ? 'justify-end' : 'justify-start'}`;
-        bubble.innerHTML = `
-          <div class="max-w-[70%] px-3 py-1.5 rounded-2xl text-xs ${isMe ? 'picora-gradient-bg text-white' : 'bg-gray-200 dark:bg-gray-700 text-gray-800 dark:text-white'}">
+    function addComment(postId) {
+      const input = document.getElementById(`commentInput-${postId}`);
+      const text = input.value.trim();
+      if (!text) return;
+
+      const post = posts.find(p => p.id === postId);
+      if (post) {
+        post.comments.push({ author: currentUser.name, text });
+        savePosts();
+        input.value = '';
+        renderFeed();
+      }
+    }
+
+    function focusComment(postId) {
+      document.getElementById(`commentInput-${postId}`).focus();
+    }
+
+    // Stories System
+    function updateStoryAvatar() {
+      const avatarImg = document.getElementById('myStoryAvatar');
+      const plusSpan = document.getElementById('myStoryPlus');
+      if (currentUser && currentUser.avatar) {
+        avatarImg.src = currentUser.avatar;
+        avatarImg.classList.remove('hidden');
+        plusSpan.classList.add('hidden');
+      }
+    }
+
+    function triggerStoryUpload() {
+      document.getElementById('storyFileInput').click();
+    }
+
+    function uploadStory(e) {
+      const file = e.target.files[0];
+      if (!file) return;
+
+      const reader = new FileReader();
+      reader.onload = (evt) => {
+        stories.unshift({
+          id: Date.now(),
+          author: currentUser.name,
+          avatar: currentUser.avatar || "https://via.placeholder.com/150",
+          mediaSrc: evt.target.result
+        });
+        saveStories();
+        renderStories();
+        showToast("스토리가 등록되었습니다.");
+      };
+      reader.readAsDataURL(file);
+    }
+
+    function renderStories() {
+      const container = document.getElementById('storiesContainer');
+      container.innerHTML = '';
+      stories.forEach(s => {
+        const div = document.createElement('div');
+        div.className = "flex flex-col items-center space-y-1 cursor-pointer min-w-[60px]";
+        div.onclick = () => alert(`${s.author}님의 스토리 보기`);
+        div.innerHTML = `
+          <div class="w-14 h-14 rounded-full p-[2px] story-ring">
+            <img src="${s.avatar}" class="w-full h-full object-cover rounded-full border-2 border-white dark:border-black">
+          </div>
+          <span class="text-[11px] truncate w-14 text-center">${s.author}</span>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    // Explore Grid (Landscape & Portrait video layout)
+    function renderExplore() {
+      const grid = document.getElementById('exploreGrid');
+      grid.innerHTML = '';
+      posts.forEach(p => {
+        const div = document.createElement('div');
+        div.className = "aspect-square bg-gray-200 dark:bg-gray-800 overflow-hidden relative";
+        if (p.mediaSrc) {
+          if (p.mediaType === 'video') {
+            div.innerHTML = `<video src="${p.mediaSrc}" class="w-full h-full object-cover"></video><span class="absolute top-1 right-1 text-xs">🎥</span>`;
+          } else {
+            div.innerHTML = `<img src="${p.mediaSrc}" class="w-full h-full object-cover">`;
+          }
+        } else {
+          div.className = "aspect-square bg-gray-300 dark:bg-gray-700 p-2 text-[10px] flex items-center justify-center text-center overflow-hidden";
+          div.textContent = p.caption;
+        }
+        grid.appendChild(div);
+      });
+    }
+
+    // DM System
+    function renderDM() {
+      const box = document.getElementById('dmMessages');
+      box.innerHTML = '';
+      dmMessages.forEach(m => {
+        const isMe = m.author === currentUser.name;
+        const div = document.createElement('div');
+        div.className = `flex flex-col ${isMe ? 'items-end' : 'items-start'}`;
+        div.innerHTML = `
+          <span class="text-[10px] text-gray-400">${m.author}</span>
+          <div class="p-2 rounded-lg max-w-[75%] ${isMe ? 'bg-instaBlue text-white' : 'bg-gray-100 dark:bg-gray-800'}">
             ${m.text}
           </div>
         `;
-        log.appendChild(bubble);
+        box.appendChild(div);
       });
-
-      log.scrollTop = log.scrollHeight;
+      box.scrollTop = box.scrollHeight;
     }
 
-    window.sendDirectMessage = async function(e) {
-      e.preventDefault();
-      if (!window.activeDmRecipient || !window.currentUser) return;
-
+    function sendDM() {
       const input = document.getElementById('dmInput');
       const text = input.value.trim();
       if (!text) return;
 
-      const msgTime = Date.now();
-      const newMsg = {
-        id: String(msgTime),
-        from: window.currentUser.id,
-        to: window.activeDmRecipient.id,
-        text,
-        createdAtTime: msgTime,
-        time: new Date().toLocaleTimeString()
-      };
-
-      await saveMessageToCloud(newMsg);
+      dmMessages.push({ author: currentUser.name, text });
+      saveDMs();
       input.value = '';
-    };
-
-    function renderProfileTab() {
-      if (!window.currentUser) return;
-
-      const avatarBox = document.getElementById('profileAvatarBox');
-      const avatarText = document.getElementById('profileAvatarText');
-      const avatarImg = document.getElementById('profileAvatarImg');
-
-      if (window.currentUser.avatarUrl) {
-        avatarText.classList.add('hidden');
-        avatarImg.classList.remove('hidden');
-        avatarImg.src = window.currentUser.avatarUrl;
-      } else {
-        avatarImg.classList.add('hidden');
-        avatarText.classList.remove('hidden');
-        avatarText.textContent = window.currentUser.name.charAt(0).toUpperCase();
-      }
-
-      document.getElementById('profileName').textContent = window.currentUser.name;
-      
-      const profileBadge = document.getElementById('profileBadge');
-      if (window.currentUser.hasBadge) {
-        profileBadge.classList.remove('hidden');
-      } else {
-        profileBadge.classList.add('hidden');
-      }
-
-      // Render Bio / Description
-      const profileBio = document.getElementById('profileBio');
-      profileBio.textContent = window.currentUser.bio || "Picora에서 소중한 일상을 기록하고 친구들과 매일 소통하세요! ✨";
-
-      const myPosts = window.posts.filter(p => p.authorId === window.currentUser.id);
-      document.getElementById('profilePostCount').textContent = myPosts.length;
-      document.getElementById('profileFollowerCount').textContent = (window.currentUser.followers || 0).toLocaleString();
-      document.getElementById('profileFollowingCount').textContent = (window.currentUser.following || 0);
-
-      // Admin Restricted Follower Boost Button
-      const adminBoostBtn = document.getElementById('adminBoostBtn');
-      if (window.currentUser.isAdmin) {
-        adminBoostBtn.classList.remove('hidden');
-      } else {
-        adminBoostBtn.classList.add('hidden');
-      }
-
-      const applyBtn = document.getElementById('badgeApplyBtn');
-      if (window.currentUser.hasBadge) {
-        applyBtn.textContent = "공인 인증 계정 (완료)";
-        applyBtn.className = "px-3.5 py-1.5 bg-emerald-500 text-white text-xs font-bold rounded-xl cursor-default opacity-90";
-        applyBtn.disabled = true;
-      } else if (window.currentUser.followers >= 1000 || window.currentUser.isAdmin) {
-        applyBtn.textContent = "공인 인증 체크마크 신청하기";
-        applyBtn.className = "px-3.5 py-1.5 picora-gradient-bg text-white text-xs font-bold rounded-xl shadow cursor-pointer hover:opacity-90";
-        applyBtn.disabled = false;
-      } else {
-        applyBtn.textContent = "체크마크 신청 (팔로워 1,000명 이상 필요)";
-        applyBtn.className = "px-3.5 py-1.5 bg-gray-200 dark:bg-gray-800 text-gray-500 text-xs font-bold rounded-xl cursor-not-allowed";
-        applyBtn.disabled = true;
-      }
-
-      const grid = document.getElementById('profilePostsGrid');
-      if (!grid) return;
-      grid.innerHTML = '';
-
-      if (myPosts.length === 0) {
-        grid.innerHTML = `<p class="col-span-3 text-center text-xs text-gray-400 py-8">아직 작성한 게시물이 없습니다.</p>`;
-        return;
-      }
-
-      myPosts.forEach(post => {
-        if (!post.mediaSrc) return;
-        const item = document.createElement('div');
-        item.className = 'aspect-square bg-black rounded-xl overflow-hidden';
-        item.innerHTML = `<img src="${post.mediaSrc}" class="w-full h-full object-cover">`;
-        grid.appendChild(item);
-      });
+      renderDM();
     }
 
-    window.handleAvatarUpload = function(e) {
-      const file = e.target.files[0];
-      if (!file || !window.currentUser) return;
+    // Admin Control Panel
+    function renderAdmin() {
+      document.getElementById('adminUserCount').textContent = users.length;
+      switchAdminTab('users');
+    }
 
-      const reader = new FileReader();
-      reader.onload = async function(event) {
-        window.currentUser.avatarUrl = event.target.result;
-        await saveUserToCloud(window.currentUser);
-        sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-        window.showToast("프로필 사진이 변경되었습니다!", "fa-image");
-        renderProfileTab();
-        window.showMainApp();
-      };
-      reader.readAsDataURL(file);
-    };
+    function switchAdminTab(type) {
+      const content = document.getElementById('adminContent');
+      content.innerHTML = '';
 
-    window.toggleBioEdit = function(show) {
-      const bioEditBox = document.getElementById('bioEditBox');
-      const bioInput = document.getElementById('bioInput');
-      const profileBio = document.getElementById('profileBio');
-      const editBioBtn = document.getElementById('editBioBtn');
-
-      if (show) {
-        bioInput.value = window.currentUser?.bio || '';
-        bioEditBox.classList.remove('hidden');
-        profileBio.classList.add('hidden');
-        editBioBtn.classList.add('hidden');
+      if (type === 'users') {
+        users.forEach(u => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded text-xs";
+          div.innerHTML = `
+            <span>${u.name} (팔로워: ${u.followers}) ${u.hasBadge ? '✔' : ''}</span>
+            <button onclick="adminDeleteUser('${u.id}')" class="text-red-500 font-bold">삭제</button>
+          `;
+          content.appendChild(div);
+        });
       } else {
-        bioEditBox.classList.add('hidden');
-        profileBio.classList.remove('hidden');
-        editBioBtn.classList.remove('hidden');
+        posts.forEach(p => {
+          const div = document.createElement('div');
+          div.className = "flex justify-between items-center p-2 bg-white dark:bg-gray-800 rounded text-xs";
+          div.innerHTML = `
+            <span class="truncate w-40">${p.author}: ${p.caption || '미디어'}</span>
+            <button onclick="adminDeletePost(${p.id})" class="text-red-500 font-bold">삭제</button>
+          `;
+          content.appendChild(div);
+        });
       }
-    };
+    }
 
-    window.saveProfileBio = async function() {
-      if (!window.currentUser) return;
+    function adminDeleteUser(id) {
+      users = users.filter(u => u.id !== id);
+      saveUsers();
+      renderAdmin();
+      showToast("계정이 삭제되었습니다.");
+    }
 
-      const bioInput = document.getElementById('bioInput');
-      const newBio = bioInput.value.trim();
+    function adminDeletePost(id) {
+      posts = posts.filter(p => p.id !== id);
+      savePosts();
+      renderAdmin();
+      renderFeed();
+      showToast("게시물이 삭제되었습니다.");
+    }
 
-      window.currentUser.bio = newBio;
-      await saveUserToCloud(window.currentUser);
-      sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
+    // LocalStorage Helper Operations
+    function saveUsers() { localStorage.setItem('picora_users', JSON.stringify(users)); }
+    function savePosts() { localStorage.setItem('picora_posts', JSON.stringify(posts)); }
+    function saveStories() { localStorage.setItem('picora_stories', JSON.stringify(stories)); }
+    function saveDMs() { localStorage.setItem('picora_dms', JSON.stringify(dmMessages)); }
+    function saveCurrentUser() { localStorage.setItem('picora_current_user', JSON.stringify(currentUser)); }
 
-      window.showToast("프로필 소개글이 저장되었습니다!", "fa-floppy-disk");
-      window.toggleBioEdit(false);
-      renderProfileTab();
-    };
+    function updateUserInList(u) {
+      const idx = users.findIndex(item => item.id === u.id);
+      if (idx !== -1) users[idx] = u;
+      saveUsers();
+    }
 
-    window.simulateFollowerBoost = async function() {
-      if (!window.currentUser) return;
-
-      // Restrict follower boost ONLY to Admin
-      if (!window.currentUser.isAdmin) {
-        window.showToast("관리자 권한이 있는 계정만 사용할 수 있습니다.", "fa-lock");
-        return;
-      }
-
-      window.currentUser.followers = (window.currentUser.followers || 0) + 500;
-      await saveUserToCloud(window.currentUser);
-      sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-      window.showToast(`[관리자] 팔로워가 500명 증가하였습니다! (현재: ${window.currentUser.followers.toLocaleString()}명)`, "fa-user-plus");
-      renderProfileTab();
-    };
-
-    window.requestVerifiedBadge = async function() {
-      if (!window.currentUser || window.currentUser.hasBadge) return;
-
-      if (window.currentUser.followers >= 1000 || window.currentUser.isAdmin) {
-        window.currentUser.hasBadge = true;
-        await saveUserToCloud(window.currentUser);
-        sessionStorage.setItem('picora_current_user', JSON.stringify(window.currentUser));
-
-        window.showToast("축하합니다! 공인 인증 체크마크가 정식 발급되었습니다.", "fa-circle-check");
-        renderProfileTab();
-      } else {
-        window.showToast("팔로워 1,000명 이상 조건 만족 시 신청 가능합니다.", "fa-lock");
-      }
-    };
-
-    window.onload = function() {
-      window.initApp();
-    };
+    function loadMockData() {
+      users = JSON.parse(localStorage.getItem('picora_users')) || [
+        { id: ADMIN_ID, name: "관리자", followers: 9999, hasBadge: true, isAdmin: true, bio: "Picora 공식 계정입니다." }
+      ];
+      posts = JSON.parse(localStorage.getItem('picora_posts')) || [];
+      stories = JSON.parse(localStorage.getItem('picora_stories')) || [];
+      dmMessages = JSON.parse(localStorage.getItem('picora_dms')) || [];
+      renderStories();
+    }
   </script>
 </body>
 </html>
